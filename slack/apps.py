@@ -9,14 +9,9 @@ class SlackConfig(AppConfig):
         from api.models import Role
         from .services import get_db_ready_user_list
 
-        common_worker = Role(name='cw')
-        common_worker.save()
-
-        reviewer = Role(name='r')
-        reviewer.save()
-
-        administrator = Role(name='a')
-        administrator.save()
+        Role(name='cw').save()
+        Role(name='r').save()
+        Role(name='a').save()
 
         #users = get_db_ready_user_list()
         #requests.post('http://127.0.0.1:8000/api/add_users/', json=users)

@@ -6,6 +6,7 @@ from django.db import models
 class User(models.Model):
     service_id = models.CharField(max_length=11, primary_key=True)
 
+
 class Role(models.Model):
     class ExistingRoles(models.TextChoices):
         COMMON_WORKER = 'cw'
@@ -23,6 +24,12 @@ class UserRole(models.Model):
                                  role=self.role).exists():
             raise ValidationError("Model already exists")
         super(UserRole, self).validate_unique(exclude)
+
+    def validate_unique(self, exclude=None):
+        if (UserRole.objects.exclude(id=self.id).
+                filter(user=self.user, role=self.role).exists()):
+            raise ValidationError("Model already exists")
+        super().validate_unique(exclude)
 
 class Request(models.Model):
     class Status(models.TextChoices):

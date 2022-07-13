@@ -11,13 +11,19 @@ app = App(
 
 handler = SlackRequestHandler(app=app)
 
-@csrf_exempt
-def events(request):
-    return handler.handle(request)
+# @csrf_exempt
+# def events(request):
+#     return handler.handle(request)
 
 @csrf_exempt
 def events(request):
     return handler.handle(request)
+
+
+@app.event("app_mention")
+def handle_app_mentions(logger, event, say):
+    logger.info(event)
+    say(f"Hi there, <@{event['user']}>")
 
 
 @app.event('app_home_opened')
