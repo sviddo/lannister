@@ -66,3 +66,12 @@ def add_user(request):
         return Response([exception_message], status=status.HTTP_400_BAD_REQUEST)
 
     return Response(data=user_to_add, status=status.HTTP_200_OK)
+
+
+
+@api_view(['DELETE'])
+def delete_user(request, user_id):
+    user_to_delete = User.objects.filter(service_id=user_id).first()
+    if user_to_delete:
+        return Response(user_to_delete.delete(), status=status.HTTP_200_OK)
+    return Response(["No such user!"], status=status.HTTP_400_BAD_REQUEST)
