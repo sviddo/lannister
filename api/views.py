@@ -5,7 +5,8 @@ from rest_framework.decorators import api_view
 from requests import JSONDecodeError
 from .models import (
     User, 
-    UserRole, 
+    Role,
+    UserRole,
 )
 from rest_framework.views import APIView
 from .serializers import (
@@ -15,6 +16,7 @@ from .serializers import (
 from rest_framework.response import Response
 from rest_framework import status
 from json.decoder import JSONDecodeError
+from .services import CustomException
 
 
 
@@ -75,3 +77,54 @@ def delete_user(request, user_id):
     if user_to_delete:
         return Response(user_to_delete.delete(), status=status.HTTP_200_OK)
     return Response(["No such user!"], status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class ReviewerRole(APIView):
+    def get_object(self, pk):
+        try:
+            return User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            raise CustomException("User does not exist!")
+
+
+    def patch(self, request, user_id):
+        try:
+            user_to_update = self.get_object(user_id)
+        except CustomException as exc:
+            exception_message = str(exc)
+            return Response([exception_message], status=status.HTTP_400_BAD_REQUEST)
+
+        if UserRole.objects.filter(user=user_to_update, role=Role.objects.get(pk='r')).first():
+            return Response(["User is already reviewer!"], status=status.HTTP_400_BAD_REQUEST)
+
+        UserRole(user=user_to_update, role=Role.objects.get(pk='r')).save()
+
+        return Response(self.get_user(user_id), status=status.HTTP_200_OK)
+        
+
+    def delete(self, request, user_id):
+        try:
+            user_to_update = self.get_object(user_id)
+        except CustomException as exc:
+            exception_message = str(exc)
+            return Response([exception_message], status=status.HTTP_400_BAD_REQUEST)
+
+        if not UserRole.objects.filter(user=user_id, role=Role.objects.get(pk='r')):
+            return Response(["User is not reviewer!"], status=status.HTTP_400_BAD_REQUEST)
+
+        UserRole.objects.get(user=user_to_update, role=Role.objects.get(pk='r')).delete()
+
+        return Response(self.get_user(user_id), status=status.HTTP_200_OK)
+
+
+    @staticmethod
+    def get_user(user_id):
+        users_with_roles = []
+        roles = []
+        for user_role in UserRole.objects.filter(user=user_id):
+            roles.append(user_role.role.name)
+
+        users_with_roles.append({'service_id': user_id, 'roles': roles})
+
+        return users_with_roles
