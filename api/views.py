@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from json.decoder import JSONDecodeError
 from .services import CustomException
+from .services import get_request
 
 
 
@@ -217,3 +218,21 @@ class RequestView(APIView):
             return Response([exception_message], status=status.HTTP_400_BAD_REQUEST)
 
         return Response(request_to_delete.delete(), status=status.HTTP_200_OK)
+
+
+
+@api_view(["GET"])
+def get_user_requests(request, user_id):
+    user = User.objects.filter(service_id=user_id).first()
+    if not user:
+        return Response(["No such user!"], status=status.HTTP_400_BAD_REQUEST)
+
+    requests = Request.objects.filter(creator=user_id)
+    if requests:
+        user_requests = []
+        for elem in requests:
+            user_requests.append(get_request(elem))
+
+        return Response(user_requests, status=status.HTTP_200_OK)
+
+    return Response(["User has no requests!"], status=status.HTTP_400_BAD_REQUEST)
