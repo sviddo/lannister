@@ -146,9 +146,10 @@ class RequestSerializer(serializers.Serializer):
         data_to_save['creator'] = User.objects.get(service_id=data_to_save['creator'])
         data_to_save['reviewer'] = User.objects.get(service_id=data_to_save['reviewer'])
 
-        Request.objects.create(**data_to_save)
+        request = Request.objects.create(**data_to_save)
+        print(request)
 
-        return validated_data
+        return get_request(request)
 
 
     def update(self, instance, validated_data):
