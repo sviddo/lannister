@@ -176,3 +176,44 @@ def create_request(request):
         return Response([exception_message], status=status.HTTP_400_BAD_REQUEST)
 
     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+
+class RequestView(APIView):
+    def get_object(self, pk):
+        try:
+            int(pk)
+            return Request.objects.get(pk=pk)
+        except ValueError:
+            raise CustomException("Request id must be integer!")
+        except Request.DoesNotExist:
+            raise CustomException("Request does not exist!")
+
+
+    def patch(self, request, request_id):        
+        try:
+            request_to_update = self.get_object(request_id)
+            request_data = json.loads(request.body)
+
+            serializer = RequestSerializer(request_to_update, data=request_data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except JSONDecodeError:
+            return Response(["Invalid json format! Please, check its correctness"], status=status.HTTP_400_BAD_REQUEST)
+
+        except CustomException as exc:
+            exception_message = str(exc)
+            return Response([exception_message], status=status.HTTP_400_BAD_REQUEST)
+
+
+    def delete(self, request, request_id):
+        try:
+            request_to_delete = self.get_object(request_id)
+        except CustomException as exc:
+            exception_message = str(exc)
+            return Response([exception_message], status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(request_to_delete.delete(), status=status.HTTP_200_OK)

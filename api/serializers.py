@@ -7,6 +7,7 @@ from .models import (
 )
 from rest_framework.validators import UniqueValidator
 from .services import CustomException
+from .services import get_request
 
 
 
@@ -151,4 +152,21 @@ class RequestSerializer(serializers.Serializer):
         Request.objects.create(**data_to_save)
 
         return validated_data
+
+
+    def update(self, instance, validated_data):
+        forbidden_fields = ['creator', 'reviewer', 'creation_time', 'last_modification_time']
+        for field in forbidden_fields:
+            if field in validated_data:
+                error_message = f"'{field}' field can\'t be changed!"
+                raise CustomException(error_message)
+
+        instance.status = validated_data.get('status', instance.status)
+        instance.bonus_type = validated_data.get('bonus_type', instance.bonus_type)
+        instance.description = validated_data.get('description', instance.description)
+        instance.paymant_day = validated_data.get('paymant_day', instance.paymant_day)
+
+        instance.save()
+
+        return get_request(instance)
         
