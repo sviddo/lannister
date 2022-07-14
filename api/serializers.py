@@ -2,9 +2,11 @@ from rest_framework import serializers
 from .models import (
     Role, 
     User, 
-    UserRole, 
+    UserRole,
+    Request,
 )
 from rest_framework.validators import UniqueValidator
+from .services import CustomException
 
 
 
@@ -61,3 +63,92 @@ class UserRoleSerializer(serializers.Serializer):
             user_role.save()
                 
         return validated_data
+
+
+
+class RequestSerializer(serializers.Serializer):
+
+    creator = serializers.CharField(max_length=11, required=True)
+    reviewer = serializers.CharField(max_length=11, required=True)
+    status = serializers.CharField(required=True)
+    bonus_type = serializers.CharField(required=True)
+    description = serializers.CharField(required=True)
+    creation_time = serializers.DateTimeField(required=False)
+    last_modification_time = serializers.DateTimeField(required=False)
+    paymant_day = serializers.DateTimeField(required=False)
+
+
+    def is_creator_valid(self, value):
+        user = User.objects.filter(service_id=value).first()
+        if not user:
+            raise CustomException("No such user for 'creator' field!")
+        return value
+
+
+    def is_reviewer_valid(self, value):
+        user = User.objects.filter(service_id=value).first()
+        if not user:
+            raise CustomException("No such user for 'reviewer' field!")
+
+        if not UserRole.objects.filter(user=user, role=Role.objects.get(name='r')):
+            raise CustomException("Your supposed reviewer isn't actually reviewer!")
+
+        return value
+
+
+    def is_status_valid(self, value):
+        choices = Request.Status.values
+
+        choices_to_print = []
+        for choice in choices:
+            choices_to_print.append(choice)
+
+        choices_to_print = ["'" + elem + "'" for elem in choices_to_print]
+
+        if value not in choices:
+            message = f"'status' field must be in [{', '.join(choices_to_print)}]"
+            raise CustomException(message)
+
+        return value
+
+
+    def is_creation_time_valid(self, value):
+        if value:
+            raise CustomException("It's forbidden to change the 'creation_time' field!")
+
+    
+    def is_last_modification_time_valid(self, value):
+        if value:
+            raise CustomException("It's forbidden to change the 'last_modification_time' field!")
+
+
+    def create(self, validated_data):
+        fields_to_check = {
+            'creator': self.is_creator_valid, 
+            'reviewer': self.is_reviewer_valid, 
+            'status': self.is_status_valid, 
+            'creation_time': self.is_creation_time_valid, 
+            'last_modification_time': self.is_last_modification_time_valid
+        }
+        for key, value in fields_to_check.items():
+            if key in validated_data:
+                value(validated_data[key])
+
+        probably_unique_fields = {
+            "creator": validated_data['creator'],
+            "reviewer": validated_data['reviewer'],
+            "bonus_type": validated_data['bonus_type'],
+            "status": validated_data['status'],
+        }
+
+        if Request.objects.filter(**probably_unique_fields).first():
+            raise CustomException("Such request already exists!")
+
+        data_to_save = validated_data.copy()
+        data_to_save['creator'] = User.objects.get(service_id=data_to_save['creator'])
+        data_to_save['reviewer'] = User.objects.get(service_id=data_to_save['reviewer'])
+
+        Request.objects.create(**data_to_save)
+
+        return validated_data
+        
