@@ -141,6 +141,7 @@ def get_requests(request):
         requests_list = []
         for elem in requests:
             temp_dict = {}
+            temp_dict['id'] = elem.id
             temp_dict['creator'] = elem.creator.service_id
             temp_dict['reviewer'] = elem.reviewer.service_id
             temp_dict['status'] = elem.status

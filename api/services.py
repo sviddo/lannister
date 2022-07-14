@@ -9,6 +9,7 @@ class CustomException(Exception):
 def get_request(request: Request):
     request_data = {}
     # creator = UserSerializer(data=elem.)
+    request_data['id'] = request.id
     request_data['creator'] = request.creator.service_id
     request_data['reviewer'] = request.reviewer.service_id
     request_data['status'] = request.status

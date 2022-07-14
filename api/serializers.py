@@ -69,6 +69,7 @@ class UserRoleSerializer(serializers.Serializer):
 
 class RequestSerializer(serializers.Serializer):
 
+    id = serializers.IntegerField(read_only=True)
     creator = serializers.CharField(max_length=11, required=True)
     reviewer = serializers.CharField(max_length=11, required=True)
     status = serializers.CharField(required=True)
