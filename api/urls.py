@@ -4,6 +4,7 @@ from .views import (
     add_user,
     delete_user,
     ReviewerRole,
+    get_requests,
 )
 
 
@@ -12,4 +13,5 @@ urlpatterns = [
     path('add_user', add_user, name='add-user'),
     path('delete_user/<str:user_id>', delete_user, name='delete-user'),
     path('reviewer_role/<str:user_id>', ReviewerRole.as_view(), name='reviewer-role'),  # add/remove reviewer role
+    path('requests', get_requests, name='all-requests'),  # get all requests (use case for admin)
 ]

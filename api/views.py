@@ -7,6 +7,7 @@ from .models import (
     User, 
     Role,
     UserRole,
+    Request,
 )
 from rest_framework.views import APIView
 from .serializers import (
@@ -128,3 +129,26 @@ class ReviewerRole(APIView):
         users_with_roles.append({'service_id': user_id, 'roles': roles})
 
         return users_with_roles
+
+
+
+@api_view(["GET"])
+def get_requests(request):
+    requests = Request.objects.all()
+    if requests:
+        requests_list = []
+        for elem in requests:
+            temp_dict = {}
+            temp_dict['creator'] = elem.creator.service_id
+            temp_dict['reviewer'] = elem.reviewer.service_id
+            temp_dict['status'] = elem.status
+            temp_dict['bonus_type'] = elem.bonus_type
+            temp_dict['description'] = elem.description
+            temp_dict['creation_time'] = elem.creation_time
+            temp_dict['last_modification_time'] = elem.last_modification_time
+            temp_dict['paymant_day'] = elem.paymant_day
+            requests_list.append(temp_dict)
+
+        return Response(requests_list, status=status.HTTP_200_OK)
+
+    return Response(["No requests created!"], status=status.HTTP_400_BAD_REQUEST)
