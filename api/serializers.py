@@ -43,7 +43,6 @@ class UserRoleSerializer(serializers.Serializer):
             roles.append(role.name)
 
         roles_to_print = ["'" + elem + "'" for elem in roles]
-
         
         for value in values:
             if value not in roles:
@@ -80,14 +79,14 @@ class RequestSerializer(serializers.Serializer):
     paymant_day = serializers.DateTimeField(required=False)
 
 
-    def is_creator_valid(self, value):
+    def validate_creator(self, value):
         user = User.objects.filter(service_id=value).first()
         if not user:
             raise CustomException("No such user for 'creator' field!")
         return value
 
 
-    def is_reviewer_valid(self, value):
+    def validate_reviewer(self, value):
         user = User.objects.filter(service_id=value).first()
         if not user:
             raise CustomException("No such user for 'reviewer' field!")
@@ -98,7 +97,7 @@ class RequestSerializer(serializers.Serializer):
         return value
 
 
-    def is_status_valid(self, value):
+    def validate_status(self, value):
         choices = Request.Status.values
 
         choices_to_print = []
@@ -126,9 +125,6 @@ class RequestSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         fields_to_check = {
-            'creator': self.is_creator_valid, 
-            'reviewer': self.is_reviewer_valid, 
-            'status': self.is_status_valid, 
             'creation_time': self.is_creation_time_valid, 
             'last_modification_time': self.is_last_modification_time_valid
         }
@@ -156,12 +152,17 @@ class RequestSerializer(serializers.Serializer):
 
 
     def update(self, instance, validated_data):
-        forbidden_fields = ['creator', 'reviewer', 'creation_time', 'last_modification_time']
+        forbidden_fields = ['creator', 'creation_time', 'last_modification_time']
         for field in forbidden_fields:
             if field in validated_data:
                 error_message = f"'{field}' field can\'t be changed!"
                 raise CustomException(error_message)
+        try:
+            reviewer = User.objects.filter(pk=validated_data['reviewer']).first()
+        except KeyError:
+            reviewer = instance.reviewer
 
+        instance.reviewer = reviewer
         instance.status = validated_data.get('status', instance.status)
         instance.bonus_type = validated_data.get('bonus_type', instance.bonus_type)
         instance.description = validated_data.get('description', instance.description)
