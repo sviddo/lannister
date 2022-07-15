@@ -19,25 +19,39 @@ from rest_framework.response import Response
 from rest_framework import status
 from json.decoder import JSONDecodeError
 from .services import CustomException
-from .services import get_request
+from .services import get_user, get_request
 
 
 
 @api_view(['GET'])
-def get_users(requests):
+def get_users(request):
     users = User.objects.all()
     if users:
         users_with_roles = []
         for user in users:
-            service_id = user.service_id
-            roles = []
-            for user_role in UserRole.objects.filter(user=service_id):
-                roles.append(user_role.role.name)
-
-            users_with_roles.append({'service_id': service_id, 'roles': roles})
+            users_with_roles.append(get_user(user))
         return Response(users_with_roles, status=status.HTTP_200_OK)
     else:
         return Response(["No users!"], status=status.HTTP_404_NOT_FOUND)
+
+
+
+class SingleUser(APIView):
+    def get(self, request, user_id):
+        print("yes")
+        user = User.objects.filter(service_id=user_id).first()
+        if user:
+            return Response(get_user(user), status=status.HTTP_200_OK)
+        else:
+            return Response(["No such user!"], status=status.HTTP_404_NOT_FOUND)
+
+
+    def delete(self, request, user_id):
+        user_to_delete = User.objects.filter(service_id=user_id).first()
+        if user_to_delete:
+            return Response(user_to_delete.delete(), status=status.HTTP_200_OK)
+        return Response(["No such user!"], status=status.HTTP_400_BAD_REQUEST)
+
 
 
 
@@ -71,15 +85,6 @@ def add_user(request):
         return Response([exception_message], status=status.HTTP_400_BAD_REQUEST)
 
     return Response(data=user_to_add, status=status.HTTP_200_OK)
-
-
-
-@api_view(['DELETE'])
-def delete_user(request, user_id):
-    user_to_delete = User.objects.filter(service_id=user_id).first()
-    if user_to_delete:
-        return Response(user_to_delete.delete(), status=status.HTTP_200_OK)
-    return Response(["No such user!"], status=status.HTTP_400_BAD_REQUEST)
 
 
 
