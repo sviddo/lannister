@@ -1,4 +1,6 @@
 from .models import Request
+from .models import UserRole, Request
+
 
 class CustomException(Exception):
     """
@@ -6,9 +8,19 @@ class CustomException(Exception):
     """
 
 
+def get_user(request: Request):
+    service_id = request.service_id
+    roles = []
+    for user_role in UserRole.objects.filter(user=service_id):
+        roles.append(user_role.role.name)
+
+    return {'service_id': service_id, 'roles': roles}
+
+
+
 def get_request(request: Request):
     request_data = {}
-    # creator = UserSerializer(data=elem.)
+
     request_data['id'] = request.id
     request_data['creator'] = request.creator.service_id
     request_data['reviewer'] = request.reviewer.service_id
