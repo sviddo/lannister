@@ -58,5 +58,9 @@ class RequestHistory(models.Model):
 
     request = models.ForeignKey(Request, on_delete=models.CASCADE)
     modified = models.DateTimeField(auto_now_add=True)
-    type_of_change = models.CharField(max_length=1, choices=TypeOfChange.choices)
+    type_of_change = models.CharField(
+        max_length=1, 
+        choices=TypeOfChange.choices, 
+        default='c'
+    )
     

@@ -4,6 +4,7 @@ from .models import (
     User, 
     UserRole,
     Request,
+    RequestHistory,
 )
 from rest_framework.validators import UniqueValidator
 from .services import CustomException
@@ -165,4 +166,34 @@ class RequestSerializer(serializers.Serializer):
         instance.save()
 
         return get_request(instance)
+
+
+
+class RequestHistorySerializer(serializers.Serializer):
+    request = serializers.IntegerField(required=True)
+    modified = serializers.DateTimeField(required=False)
+    type_of_change = serializers.CharField(required=False)
+
+    
+    def validate_request(self, value):
+        user = Request.objects.filter(id=value).first()
+        if not user:
+            raise CustomException("No such request created!")
+        return value
+
+
+    def validate_type_of_change(self, value):
+        choices = RequestHistory.TypeOfChange.values
+
+        choices_to_print = []
+        for choice in choices:
+            choices_to_print.append(choice)
+
+        choices_to_print = ["'" + elem + "'" for elem in choices_to_print]
+
+        if value not in choices:
+            message = f"'type_of_change' field must be in [{', '.join(choices_to_print)}]"
+            raise CustomException(message)
+
+        return value
         
