@@ -145,17 +145,7 @@ def get_requests(request):
     if requests:
         requests_list = []
         for elem in requests:
-            temp_dict = {}
-            temp_dict['id'] = elem.id
-            temp_dict['creator'] = elem.creator.service_id
-            temp_dict['reviewer'] = elem.reviewer.service_id
-            temp_dict['status'] = elem.status
-            temp_dict['bonus_type'] = elem.bonus_type
-            temp_dict['description'] = elem.description
-            temp_dict['creation_time'] = elem.creation_time
-            temp_dict['last_modification_time'] = elem.last_modification_time
-            temp_dict['paymant_day'] = elem.paymant_day
-            requests_list.append(temp_dict)
+            requests_list.append(get_request(elem))
 
         return Response(requests_list, status=status.HTTP_200_OK)
 
