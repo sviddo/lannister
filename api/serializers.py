@@ -143,12 +143,14 @@ class RequestSerializer(serializers.Serializer):
 
 
     def update(self, instance, validated_data):
-        if instance.status == 'p':
+        if instance.status == 'a':
+            raise CustomException("This request is approved, so can't be updated!")
+        elif instance.status == 'p':
             raise CustomException("This request is paid, so closed and can't be updated!")
         elif instance.status == 'r':
             raise CustomException("This request is rejected, so can't be updated and approved later!")
         elif instance.status == 'c' and validated_data['status'] == 'c':
-            raise CustomException("This request is alread, so can't be recreated!")
+            raise CustomException("This request is already created, so can't be recreated!")
             
         forbidden_fields = ['creator', 'creation_time']
         for field in forbidden_fields:
@@ -156,7 +158,7 @@ class RequestSerializer(serializers.Serializer):
                 error_message = f"'{field}' field can't be changed!"
                 raise CustomException(error_message)
 
-        if 'status' in validated_data and validated_data['status'] == 'a':
+        if 'status' in validated_data and validated_data['status'] == 'a' and 'paymant_day' not in validated_data:
             raise CustomException("You must provide 'paymant_day' field to change status to 'approved'!")
 
         try:
