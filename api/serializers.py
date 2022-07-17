@@ -75,7 +75,6 @@ class RequestSerializer(serializers.Serializer):
     bonus_type = serializers.CharField(required=True)
     description = serializers.CharField(required=True)
     creation_time = serializers.DateTimeField(required=False)
-    last_modification_time = serializers.DateTimeField(required=False)
     paymant_day = serializers.DateTimeField(required=False)
 
 
@@ -117,16 +116,9 @@ class RequestSerializer(serializers.Serializer):
         if value:
             raise CustomException("It's forbidden to change the 'creation_time' field!")
 
-    
-    def is_last_modification_time_valid(self, value):
-        if value:
-            raise CustomException("It's forbidden to change the 'last_modification_time' field!")
-
-
     def create(self, validated_data):
         fields_to_check = {
-            'creation_time': self.is_creation_time_valid, 
-            'last_modification_time': self.is_last_modification_time_valid
+            'creation_time': self.is_creation_time_valid
         }
         for key, value in fields_to_check.items():
             if key in validated_data:
@@ -153,7 +145,7 @@ class RequestSerializer(serializers.Serializer):
 
 
     def update(self, instance, validated_data):
-        forbidden_fields = ['creator', 'creation_time', 'last_modification_time']
+        forbidden_fields = ['creator', 'creation_time']
         for field in forbidden_fields:
             if field in validated_data:
                 error_message = f"'{field}' field can\'t be changed!"
