@@ -72,7 +72,7 @@ class RequestSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     creator = serializers.CharField(max_length=11, required=True)
     reviewer = serializers.CharField(max_length=11, required=True)
-    status = serializers.CharField(required=True)
+    status = serializers.CharField(required=False)
     bonus_type = serializers.CharField(required=True)
     description = serializers.CharField(required=True)
     creation_time = serializers.DateTimeField(required=False)
@@ -119,29 +119,23 @@ class RequestSerializer(serializers.Serializer):
 
 
     def create(self, validated_data):
-        fields_to_check = {
-            'creation_time': self.is_creation_time_valid, 
-        }
-        for key, value in fields_to_check.items():
-            if key in validated_data:
-                value(validated_data[key])
+        if 'creation_time' in validated_data:
+            self.is_creation_time_valid(validated_data['creation_time'])
 
-        probably_unique_fields = {
-            "creator": validated_data['creator'],
-            "reviewer": validated_data['reviewer'],
-            "bonus_type": validated_data['bonus_type'],
-            "status": validated_data['status'],
-        }
-
-        if Request.objects.filter(**probably_unique_fields).first():
-            raise CustomException("Such request already exists!")
+        if 'status' in validated_data and validated_data['status'] in ('a', 'r', 'p'):
+            error_message = f"It's forbidden to set 'status' field with '{validated_data['status']}' value on request creation!"
+            raise CustomException(error_message)
 
         data_to_save = validated_data.copy()
         data_to_save['creator'] = User.objects.get(service_id=data_to_save['creator'])
         data_to_save['reviewer'] = User.objects.get(service_id=data_to_save['reviewer'])
 
         request = Request.objects.create(**data_to_save)
-        print(request)
+        data_for_history_serializer = {
+            'request': request,
+        }
+
+        RequestHistorySerializer(data=data_for_history_serializer).save()
 
         return get_request(request)
 
