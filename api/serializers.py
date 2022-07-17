@@ -73,7 +73,7 @@ class RequestSerializer(serializers.Serializer):
     creator = serializers.CharField(max_length=11, required=True)
     reviewer = serializers.CharField(max_length=11, required=True)
     status = serializers.CharField(required=False)
-    bonus_type = serializers.CharField(required=True)
+    bonus_type = serializers.CharField(required=True, max_length=80)
     description = serializers.CharField(required=True)
     creation_time = serializers.DateTimeField(required=False)
     paymant_day = serializers.DateField(required=False)
