@@ -1,3 +1,4 @@
+from datetime import datetime
 from rest_framework import serializers
 from .models import (
     Role, 
@@ -109,6 +110,17 @@ class RequestSerializer(serializers.Serializer):
         if value not in choices:
             message = f"'status' field must be in [{', '.join(choices_to_print)}]"
             raise CustomException(message)
+
+        return value
+
+
+    def validate_paymant_day(self, value):
+        year = value.year
+        month = value.month
+        day = value.day
+
+        if (datetime(year, month, day) - datetime.now()).total_seconds() >= 0:
+            raise CustomException("'paymant_day' field must by date from tomorrow")
 
         return value
 

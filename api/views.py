@@ -254,4 +254,4 @@ def get_requests_history(request):
             "type_of_change": notion.type_of_change,
         })
     
-    return list_with_history
+    return Response(list_with_history, status=status.HTTP_200_OK)

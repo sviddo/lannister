@@ -50,7 +50,7 @@ def wait_to_change_request_status(request: Request):
         paymant_day_day,
     )
 
-    if diff.total_seconds() <= 0:
+    if diff.total_seconds() >= 0:
         request.status = 'p'
         request.save()
         RequestHistory(request=request, type_of_change='p').save()
