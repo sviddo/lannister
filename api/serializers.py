@@ -119,8 +119,8 @@ class RequestSerializer(serializers.Serializer):
         month = value.month
         day = value.day
 
-        if (datetime(year, month, day) - datetime.now()).total_seconds() >= 0:
-            raise CustomException("'paymant_day' field must by date from tomorrow")
+        if (datetime(year, month, day) - datetime.now()).total_seconds() < 0:
+            raise CustomException("'paymant_day' field must be date from tomorrow")
 
         return value
 
@@ -144,7 +144,7 @@ class RequestSerializer(serializers.Serializer):
 
         request = Request.objects.create(**data_to_save)
         data_for_history_serializer = {
-            'request': request,
+            'request': request.id,
         }
 
         request_history_serializer = RequestHistorySerializer(data=data_for_history_serializer)
@@ -161,7 +161,7 @@ class RequestSerializer(serializers.Serializer):
             raise CustomException("This request is paid, so closed and can't be updated!")
         elif instance.status == 'r':
             raise CustomException("This request is rejected, so can't be updated and approved later!")
-        elif instance.status == 'c' and validated_data['status'] == 'c':
+        elif instance.status == 'c' and 'status' in validated_data and validated_data['status'] == 'c':
             raise CustomException("This request is already created, so can't be recreated!")
             
         forbidden_fields = ['creator', 'creation_time']
@@ -186,7 +186,7 @@ class RequestSerializer(serializers.Serializer):
         instance.save()
 
         data_for_history_serializer = {
-            "request": instance,
+            "request": instance.id,
             "type_of_change": instance.status,
         }
         
