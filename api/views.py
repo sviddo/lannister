@@ -19,7 +19,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from json.decoder import JSONDecodeError
 from .services import CustomException
-from .services import get_user, get_request
+from .services import (
+    get_user, 
+    get_request,
+    wait_to_change_request_status,
+)
 
 
 
@@ -187,9 +191,10 @@ class RequestView(APIView):
             raise CustomException("Request does not exist!")
 
 
-    def patch(self, request, request_id):        
+    def patch(self, request, request_id):
         try:
             request_to_update = self.get_object(request_id)
+            wait_to_change_request_status(request_to_update)
             request_data = json.loads(request.body)
 
             serializer = RequestSerializer(request_to_update, data=request_data, partial=True)

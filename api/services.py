@@ -26,6 +26,7 @@ def get_user(request: Request):
 def get_request(request: Request):
     request_data = {}
 
+    wait_to_change_request_status(request)
     request_data['id'] = request.id
     request_data['creator'] = request.creator.service_id
     request_data['reviewer'] = request.reviewer.service_id
