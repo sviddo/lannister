@@ -76,7 +76,7 @@ class RequestSerializer(serializers.Serializer):
     bonus_type = serializers.CharField(required=True)
     description = serializers.CharField(required=True)
     creation_time = serializers.DateTimeField(required=False)
-    paymant_day = serializers.DateTimeField(required=False)
+    paymant_day = serializers.DateField(required=False)
 
 
     def validate_creator(self, value):
@@ -135,7 +135,9 @@ class RequestSerializer(serializers.Serializer):
             'request': request,
         }
 
-        RequestHistorySerializer(data=data_for_history_serializer).save()
+        request_history_serializer = RequestHistorySerializer(data=data_for_history_serializer)
+        if request_history_serializer.is_valid():
+            request_history_serializer.save()
 
         return get_request(request)
 
@@ -174,7 +176,9 @@ class RequestSerializer(serializers.Serializer):
             "type_of_change": instance.status,
         }
         
-        RequestHistorySerializer(data=data_for_history_serializer).save()
+        request_history_serializer = RequestHistorySerializer(data=data_for_history_serializer)
+        if request_history_serializer.is_valid():
+            request_history_serializer.save()
 
         return get_request(instance)
 
