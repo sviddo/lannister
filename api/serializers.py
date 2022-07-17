@@ -141,23 +141,40 @@ class RequestSerializer(serializers.Serializer):
 
 
     def update(self, instance, validated_data):
+        if instance.status == 'p':
+            raise CustomException("This request is paid, so closed and can't be updated!")
+        elif instance.status == 'r':
+            raise CustomException("This request is rejected, so can't be updated and approved later!")
+        elif instance.status == 'c' and validated_data['status'] == 'c':
+            raise CustomException("This request is alread, so can't be recreated!")
+            
         forbidden_fields = ['creator', 'creation_time']
         for field in forbidden_fields:
             if field in validated_data:
-                error_message = f"'{field}' field can\'t be changed!"
+                error_message = f"'{field}' field can't be changed!"
                 raise CustomException(error_message)
+
+        if 'status' in validated_data and validated_data['status'] == 'a':
+            raise CustomException("You must provide 'paymant_day' field to change status to 'approved'!")
+
         try:
             reviewer = User.objects.filter(pk=validated_data['reviewer']).first()
         except KeyError:
             reviewer = instance.reviewer
 
         instance.reviewer = reviewer
-        instance.status = validated_data.get('status', instance.status)
+        instance.status = validated_data.get('status', 'e')
         instance.bonus_type = validated_data.get('bonus_type', instance.bonus_type)
         instance.description = validated_data.get('description', instance.description)
         instance.paymant_day = validated_data.get('paymant_day', instance.paymant_day)
-
         instance.save()
+
+        data_for_history_serializer = {
+            "request": instance,
+            "type_of_change": instance.status,
+        }
+        
+        RequestHistorySerializer(data=data_for_history_serializer).save()
 
         return get_request(instance)
 
