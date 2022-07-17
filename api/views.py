@@ -4,6 +4,7 @@ import django.core.exceptions as exceptions
 from rest_framework.decorators import api_view
 from requests import JSONDecodeError
 from .models import (
+    RequestHistory,
     User, 
     Role,
     UserRole,
@@ -14,6 +15,7 @@ from .serializers import (
     UserSerializer,
     UserRoleSerializer,
     RequestSerializer,
+    RequestHistorySerializer,
 )
 from rest_framework.response import Response
 from rest_framework import status
@@ -237,3 +239,19 @@ def get_user_requests(request, user_id):
         return Response(user_requests, status=status.HTTP_200_OK)
 
     return Response(["User has no requests!"], status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET"])
+def get_requests_history(request):
+    for notion in RequestHistory.objects.all():
+        wait_to_change_request_status(notion.request)
+
+    list_with_history = []
+    for notion in RequestHistory.objects.all():
+        list_with_history.append({
+            "request": notion.request.id,
+            "modified": notion.modified,
+            "type_of_change": notion.type_of_change,
+        })
+    
+    return list_with_history
