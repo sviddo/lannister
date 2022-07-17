@@ -205,17 +205,5 @@ class RequestHistorySerializer(serializers.Serializer):
     def create(self, validated_data):
         request = Request.objects.get(id=validated_data['request'])    
         validated_data['request'] = request
-
-        statuses_to_reject = {
-            "p": "This request is paid, so closed and can't be changed!",
-            "a": "This request is aproved, so can't be changed back to created state!",
-            "r": "This request is rejected, so can't be changed back to created state!",
-            "e": "This request is edited, so can't be changed back to created state!",
-        }
-        if 'type_of_change' not in validated_data:
-            return RequestHistory.objects.create(**validated_data)
-        else:
-            for key, value in statuses_to_reject:
-                if RequestHistory.objects.filter(request=request, type_of_change=key) and validated_data['status'] == 'c':
-                    raise CustomException(value)
+        return RequestHistory.objects.create(**validated_data)
                     
