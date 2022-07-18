@@ -152,7 +152,6 @@ def get_requests(request):
         requests_list = []
         for elem in requests:
             requests_list.append(get_request(elem))
-
         return Response(requests_list, status=status.HTTP_200_OK)
 
     return Response(["No requests created!"], status=status.HTTP_400_BAD_REQUEST)

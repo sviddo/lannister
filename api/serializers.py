@@ -133,7 +133,6 @@ class RequestSerializer(serializers.Serializer):
     def create(self, validated_data):
         if 'creation_time' in validated_data:
             self.is_creation_time_valid(validated_data['creation_time'])
-
         if 'status' in validated_data and validated_data['status'] in ('a', 'r', 'p'):
             error_message = f"It's forbidden to set 'status' field with '{validated_data['status']}' value on request creation!"
             raise CustomException(error_message)
@@ -165,7 +164,7 @@ class RequestSerializer(serializers.Serializer):
             raise CustomException("This request is rejected, so can't be updated and approved later!")
         elif instance.status == 'c' and 'status' in validated_data and validated_data['status'] == 'c':
             raise CustomException("This request is already created, so can't be recreated!")
-            
+
         forbidden_fields = ['creator', 'creation_time']
         for field in forbidden_fields:
             if field in validated_data:
