@@ -148,7 +148,6 @@ def get_requests(request):
             temp_dict['bonus_type'] = elem.bonus_type
             temp_dict['description'] = elem.description
             temp_dict['creation_time'] = elem.creation_time
-            temp_dict['last_modification_time'] = elem.last_modification_time
             temp_dict['paymant_day'] = elem.paymant_day
             requests_list.append(temp_dict)
 
