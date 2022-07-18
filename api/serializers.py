@@ -137,6 +137,8 @@ class RequestSerializer(serializers.Serializer):
         if 'status' in validated_data and validated_data['status'] in ('a', 'r', 'p'):
             error_message = f"It's forbidden to set 'status' field with '{validated_data['status']}' value on request creation!"
             raise CustomException(error_message)
+        if 'paymant_day' in validated_data:
+            raise CustomException("It's forbidden to provide 'paymant_day' field on request creation!")
 
         data_to_save = validated_data.copy()
         data_to_save['creator'] = User.objects.get(service_id=data_to_save['creator'])
@@ -172,11 +174,22 @@ class RequestSerializer(serializers.Serializer):
 
         if 'status' in validated_data and validated_data['status'] == 'a' and 'paymant_day' not in validated_data:
             raise CustomException("You must provide 'paymant_day' field to change status to 'approved'!")
+        elif 'paymant_day' in validated_data and 'status' not in validated_data:
+            raise CustomException("You must provide 'status' field with 'paymant_day' one!")
+        elif 'paymant_day' in validated_data and 'status' in validated_data and validated_data['status'] != 'a':
+            raise CustomException("It's forbiddent to provide 'paymant_day' field with such type of request update!")
 
         try:
             reviewer = User.objects.filter(pk=validated_data['reviewer']).first()
         except KeyError:
             reviewer = instance.reviewer
+
+        for field in ['reviewer', 'status', 'bonus_type', 'description']:
+            field_object = Request._meta.get_field(field)
+            if field_object.value_from_object(instance) != validated_data.get(field, field_object.value_from_object(instance)):
+                break
+        else:
+            raise CustomException("You updated data must containt some updates!")
 
         instance.reviewer = reviewer
         instance.status = validated_data.get('status', 'e')
