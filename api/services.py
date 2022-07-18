@@ -40,21 +40,23 @@ def get_request(request: Request):
 
 
 def wait_to_change_request_status(request: Request):
-    try:
-        paymant_day = request.paymant_day
-        paymant_day_year = paymant_day.year
-        paymant_day_month = paymant_day.month
-        paymant_day_day = paymant_day.day
-        diff = datetime.now() - datetime(
-            paymant_day_year,
-            paymant_day_month,
-            paymant_day_day,
-        )
+    if request.status != 'p':
+        try:
+            paymant_day = request.paymant_day
+            paymant_day_year = paymant_day.year
+            paymant_day_month = paymant_day.month
+            paymant_day_day = paymant_day.day
+            diff = datetime.now() - datetime(
+                paymant_day_year,
+                paymant_day_month,
+                paymant_day_day,
+            )
 
-        if diff.total_seconds() >= 0:
-            request.status = 'p'
-            request.save()
-            RequestHistory(request=request, type_of_change='p').save()
-    except AttributeError:
+            if diff.total_seconds() >= 0:
+                request.status = 'p'
+                request.save()
+                RequestHistory(request=request, type_of_change='p').save()
+        except AttributeError:
+            pass
+    else:
         pass
-
