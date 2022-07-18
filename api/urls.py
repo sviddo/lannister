@@ -9,6 +9,7 @@ from .views import (
     RequestView,
     get_user_requests,
     get_requests_history,
+    get_requests_per_reviewer,
 )
 
 
@@ -22,4 +23,5 @@ urlpatterns = [
     path('request/<str:request_id>', RequestView.as_view(), name='manage-request'),  # update/delete request
     path('requests/<str:user_id>', get_user_requests, name='requests-per-user'),
     path('requests_history', get_requests_history, name='request-history'),
+    path('reviewer_requests/<str:reviewer_id>', get_requests_per_reviewer, name='requests-per-reviewer'),
 ]
