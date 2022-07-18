@@ -255,3 +255,22 @@ def get_requests_history(request):
         })
     
     return Response(list_with_history, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+def get_requests_per_reviewer(request, reviewer_id):
+    reviewer = User.objects.filter(service_id=reviewer_id).first()
+    if not reviewer:
+        return Response(["No such user!"], status=status.HTTP_400_BAD_REQUEST)
+    if not UserRole.objects.filter(user=reviewer, role=Role.objects.get(pk='r')):
+        return Response(['User is not reviewer!'], status=status.HTTP_400_BAD_REQUEST)
+
+    requests = Request.objects.filter(reviewer=reviewer_id)
+    if requests:
+        reviewer_requests = []
+        for elem in requests:
+            reviewer_requests.append(get_request(elem))
+
+        return Response(reviewer_requests, status=status.HTTP_200_OK)
+
+    return Response(["Reviewer has no requests!"], status=status.HTTP_400_BAD_REQUEST)
