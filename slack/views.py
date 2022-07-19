@@ -1,8 +1,14 @@
 from django.views.decorators.csrf import csrf_exempt
 from slack_bolt import App
 from slack_bolt.adapter.django import SlackRequestHandler
+
 from .middlewares import admin_middlewares as am, worker_middlewares as wm
-from .helpers import admin_helpers as ah, general_helpers as gh, worker_helpers as wh
+from .helpers import (
+    admin_helpers as ah, 
+    general_helpers as gh, 
+    worker_helpers as wh, 
+    reviewer_helpers as rh,
+)
 from .services import get_user_roles
 import os, requests, json
 
@@ -29,6 +35,8 @@ def update_home_tab(client, event, logger):
     if 'r' in get_user_roles(user_id):
         blocks = wh.reviewer_home_blocks()
         view['blocks'].extend(blocks)
+        reviewer_blocks = rh.reviewer_home_blocks()
+        view['blocks'].extend(reviewer_blocks)
 
     if 'a' in get_user_roles(user_id):
         blocks = ah.admin_home_blocks()
