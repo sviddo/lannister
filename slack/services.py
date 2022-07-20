@@ -1,3 +1,4 @@
+import datetime
 import requests, json
 from slack import app
 
@@ -101,3 +102,9 @@ def create_assigned_requests_blocks(assigned_requests):
         }])
 
     return requests_blocks
+
+
+def get_initial_date():
+    today = datetime.datetime.today()
+    next_day = today + datetime.timedelta(days=1)
+    return next_day
