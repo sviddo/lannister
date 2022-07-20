@@ -332,3 +332,51 @@ Creation time: {request_context['creation_time']}")
 @app.view("close_views")
 def close_views(ack):
     ack(response_action="clear")
+
+
+
+@app.action("approve_request")
+def approve_request(ack, body, client):
+    ack()
+    body['view']['blocks'].pop(-1)
+    initial_date = get_initial_date()
+    initial_year = initial_date.year
+    initial_month = initial_date.month
+    initial_day = initial_date.day
+    text = ""
+    text += f"*Creator:* @{request_context['creator']}\n"
+    text += f"*Bonus_type:* {request_context['bonus_type']}\n"
+    text += f"*Status:* approved\n"
+    text += f"*Description:* {request_context['description']}\n"
+    text += f"*Creation_time:* {request_context['creation_time']}\n"
+    body['view']['blocks'][0]['text']['text'] = text
+    body['view']['blocks'].append(
+        {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Paymant_day:*"
+      },
+      "accessory": {
+        "type": "datepicker",
+        "initial_date": f"{initial_year}-{initial_month}-{initial_day}",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Select a date",
+        },
+        "action_id": "datepicker-action"
+      }
+    }
+    )
+
+    blocks = body['view']['blocks']
+    client.views_update(
+        view_id=body['view']['id'],
+        view={
+            "type": "modal",
+            "callback_id": "make_request_approved",
+            "title": {"type": "plain_text", "text": "Approve request"},
+            "submit": {"type": "plain_text", "text": "Submit"},
+            "blocks": blocks
+        }
+    )
