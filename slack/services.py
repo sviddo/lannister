@@ -45,3 +45,14 @@ def get_user_list(assigned_requests, app):
         users_list[reviewer] = app.client.users_info(user=reviewer)['user']['real_name']
 
     return users_list
+
+
+def get_assigned_requests(reviewer_id):
+    assigned_requests = requests.get(f'http://127.0.0.1:8000/api/reviewer_requests/{reviewer_id}')
+    assigned_requests = json.loads(assigned_requests.text)
+    non_reviewed_requests = []
+    for request in assigned_requests:
+        if request['status'] in ('c', 'e'):
+            non_reviewed_requests.append(request)
+
+    return non_reviewed_requests
