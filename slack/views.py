@@ -426,3 +426,58 @@ Creation time: {request_context['creation_time']}")
             "blocks": blocks
         }
     )
+
+
+
+@app.action("datepicker-action")
+def handle_some_action(ack, body, client, context):
+    ack()
+    initial_date = list(body['view']['state']['values'].values())[0]['datepicker-action']['selected_date'].split("-")
+    diff = datetime(
+        int(initial_date[0]),
+        int(initial_date[1]),
+        int(initial_date[2])
+    ) - datetime.now()
+
+    if diff.total_seconds() < 0:
+        blocks = body['view']['blocks']
+        if len(blocks) == 3:
+            blocks.pop(-1)
+        initial_date = get_initial_date()
+        initial_year = initial_date.year
+        initial_month = initial_date.month
+        initial_day = initial_date.day
+        blocks[-1]['accessory']['initial_date'] = f"{initial_year}-{initial_month}-{initial_day}"
+        blocks.append(
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*'Paymant_day' field must be date from tomorrow!*"
+                }
+            }
+        )
+
+        client.views_update(
+            view_id=body['view']['id'],
+            view={
+                "type": "modal",
+                "title": {"type": "plain_text", "text": "Approve request"},
+                "blocks": blocks
+            }
+        )
+    else:
+        blocks = body['view']['blocks']
+        if len(blocks) == 3:
+            blocks.pop(-1)
+        
+        client.views_update(
+            view_id=body['view']['id'],
+            view={
+                "type": "modal",
+                "callback_id": "make_request_approved",
+                "title": {"type": "plain_text", "text": "Approve request"},
+                "submit": {"type": "plain_text", "text": "Submit"},
+                "blocks": blocks
+            }
+        )
