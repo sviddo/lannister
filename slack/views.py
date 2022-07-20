@@ -380,3 +380,49 @@ def approve_request(ack, body, client):
             "blocks": blocks
         }
     )
+
+
+
+@app.view("make_request_approved")
+def make_request_approved(body, client):
+    paymant_day = list(body['view']['state']['values'].values())[0]['datepicker-action']['selected_date']
+
+    uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
+    data = {
+        "status": "a",
+        "paymant_day": f"{paymant_day}"
+
+    }
+    requests.patch(url=uri, json=data)
+
+    channel_id = app.client.conversations_open(users=request_context['creator'])['channel']['id']
+    app.client.chat_postMessage(channel=channel_id, text=f"Congratulations! Your request with following data was approved:\n\
+Reviewer: @{users_list[request_context['reviewer']]}\n\
+Bonus_type: {request_context['bonus_type']}\n\
+Description: {request_context['description']}\n\
+Creation time: {request_context['creation_time']}")
+
+    for i, request in enumerate(requests_blocks):
+        if int(request['block_id']) == request_context['id']:
+            del requests_blocks[i]
+            break
+
+    blocks = [
+        {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "Request has been approved!"
+      }
+    }
+    ]
+    client.views_update(
+        view_id=body['view']['id'],
+        view={
+            "type": "modal",
+            "callback_id": "close_views",
+            "title": {"type": "plain_text", "text": "Success!"},
+            "submit": {"type": "plain_text", "text": "OK"},
+            "blocks": blocks
+        }
+    )
