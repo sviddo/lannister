@@ -327,3 +327,8 @@ Creation time: {request_context['creation_time']}")
             "blocks": blocks
         }
     )
+
+
+@app.view("close_views")
+def close_views(ack):
+    ack(response_action="clear")
