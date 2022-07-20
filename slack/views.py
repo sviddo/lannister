@@ -1,15 +1,27 @@
 from django.views.decorators.csrf import csrf_exempt
 from slack_bolt import App
 from slack_bolt.adapter.django import SlackRequestHandler
+from datetime import datetime
 
-from .middlewares import admin_middlewares as am, worker_middlewares as wm
+from .middlewares import (
+    admin_middlewares as am, 
+    worker_middlewares as wm, 
+    reviewer_middlewares as rm,
+)
 from .helpers import (
     admin_helpers as ah, 
     general_helpers as gh, 
     worker_helpers as wh, 
     reviewer_helpers as rh,
 )
-from .services import get_user_roles
+from .services import (
+    get_user_roles, 
+    get_assigned_requests, 
+    create_assigned_requests_blocks, 
+    get_initial_date, 
+    requests_blocks,
+    users_list,
+)
 import os, requests, json
 
 app = App(
@@ -37,6 +49,9 @@ def update_home_tab(client, event, logger):
         view['blocks'].extend(blocks)
         reviewer_blocks = rh.reviewer_home_blocks()
         view['blocks'].extend(reviewer_blocks)
+        assigned_requests = get_assigned_requests(user_id)
+        global requests_blocks
+        requests_blocks = create_assigned_requests_blocks(assigned_requests)
 
     if 'a' in get_user_roles(user_id):
         blocks = ah.admin_home_blocks()
