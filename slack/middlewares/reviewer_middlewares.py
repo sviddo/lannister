@@ -22,3 +22,53 @@ def get_request_details(context, body, next=None):
         next()
 
     return context['request']
+
+
+
+def create_change_status_blocks(context, next):
+    request = context['request']
+    creator = request['creator']
+    status_extended = request['status_extended']
+    bonus_type = request['bonus_type']
+    description = request['description']
+    creation_time = request['creation_time']
+    
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Creator:* @{creator}\n*Bonus type:* {bonus_type}\n*Status:* {status_extended}\n*Bonus_type:* {bonus_type}\n*Description:* {description}\n*Creation_time:* {creation_time}"
+            }
+        },
+        {
+                "type": "actions",
+                "block_id": f"{request['id']}",
+                "elements": [
+                    {
+                        "type": "button",
+                        "style": "danger",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Reject",
+                        },
+                        "value": "reject",
+                        "action_id": "reject_request"
+                    },
+                    {
+                        "type": "button",
+                        "style": "primary",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Approve",
+                        },
+                        "value": "approve",
+                        "action_id": "approve_request"
+                    }
+          ]
+        }
+    ]
+
+    context['blocks'] = blocks
+
+    next()
