@@ -1,4 +1,5 @@
 import requests, json
+from slack import app
 
 # def get_db_ready_user_list():
 #     #get all members from slack workspace
@@ -31,4 +32,16 @@ def get_user_roles(user_id):
     user_in_db = list(filter(lambda user: user["service_id"] == user_id, users))[0]
 
     return user_in_db['roles']
-    
+
+
+users_list = {}
+
+def get_user_list(assigned_requests, app):
+    global users_list
+    for request in assigned_requests:
+        creator = request['creator']
+        reviewer = request['reviewer']
+        users_list[creator] = app.client.users_info(user=creator)['user']['real_name']
+        users_list[reviewer] = app.client.users_info(user=reviewer)['user']['real_name']
+
+    return users_list
