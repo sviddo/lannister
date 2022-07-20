@@ -272,4 +272,4 @@ def get_requests_per_reviewer(request, reviewer_id):
 
         return Response(reviewer_requests, status=status.HTTP_200_OK)
 
-    return Response(["Reviewer has no requests!"], status=status.HTTP_400_BAD_REQUEST)
+    return Response(["Reviewer has no assigned requests!"], status=status.HTTP_400_BAD_REQUEST)
