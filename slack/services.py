@@ -56,3 +56,48 @@ def get_assigned_requests(reviewer_id):
             non_reviewed_requests.append(request)
 
     return non_reviewed_requests
+
+
+
+requests_blocks = []
+
+
+def create_assigned_requests_blocks(assigned_requests):
+    """Returns dictionary object wich will be
+    passed to 'see_requests' modal to build it.
+    Presents all user's reqest with possibility to edit."""
+
+    global user_list
+    users_list = get_user_list(assigned_requests, app)
+    global requests_blocks
+    if requests_blocks:
+        requests_blocks = []
+
+    for request in assigned_requests:
+        creator = request['creator']
+        extended_statuses = {
+            "c": "created",
+            "e": "edited"
+        }
+        status_extended = extended_statuses[request['status']]
+        bonus_type = request['bonus_type']
+        requests_blocks.extend([{
+            "type": "section",
+            "block_id": f"{request['id']}",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Creator:* @{users_list[creator]}\n*Bonus type:* {bonus_type}\n*Status:* {status_extended}"
+            },
+            "accessory": {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Change status"
+                },
+                "style": "primary",
+                "value": "change_status",
+                "action_id": "change_request_status"
+            }
+        }])
+
+    return requests_blocks
