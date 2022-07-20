@@ -266,3 +266,22 @@ def view_assigned_requests(ack, client, body):
             "blocks": requests_blocks
         }
     )
+
+
+request_context = None
+
+
+@app.action("change_request_status", middleware=[rm.get_request_details, rm.create_change_status_blocks])
+def edit_request(ack, body, client, context):
+    ack()
+    global request_context
+    request_context = context['request']
+    blocks = context['blocks']
+    client.views_push(
+        trigger_id=body['trigger_id'],
+        view={
+            "type": "modal",
+            "title": {"type": "plain_text", "text": "Change request status"},
+            "blocks": blocks
+        }
+    )
