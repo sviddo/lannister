@@ -4,6 +4,13 @@ def reviewer_home_blocks():
             "type": "section",
             "text": {
                 "type": "mrkdwn",
+                "text": "*For reviewers:*"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
                 "text": "Would you like to view assigned requests?"
             }
         },
