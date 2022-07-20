@@ -252,3 +252,17 @@ def handle_some_action(ack, body, context, client):
             "blocks": blocks
         }
     )
+
+
+
+@app.action("view_assigned_requests_modal")
+def view_assigned_requests(ack, client, body):
+    ack()
+    client.views_open(
+        trigger_id=body['trigger_id'],
+        view={
+            "type": "modal",
+            "title": {"type": "plain_text", "text": "Assigned requests"},
+            "blocks": requests_blocks
+        }
+    )
