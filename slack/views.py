@@ -344,7 +344,7 @@ def approve_request(ack, body, client):
     initial_month = initial_date.month
     initial_day = initial_date.day
     text = ""
-    text += f"*Creator:* @{request_context['creator']}\n"
+    text += f"*Creator:* @{users_list[request_context['creator']]}\n"
     text += f"*Bonus_type:* {request_context['bonus_type']}\n"
     text += f"*Status:* approved\n"
     text += f"*Description:* {request_context['description']}\n"
@@ -384,7 +384,7 @@ def approve_request(ack, body, client):
 
 
 @app.view("make_request_approved")
-def make_request_approved(body, client):
+def make_request_approved(ack, body, client):
     paymant_day = list(body['view']['state']['values'].values())[0]['datepicker-action']['selected_date']
 
     uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
@@ -409,23 +409,22 @@ Creation time: {request_context['creation_time']}")
 
     blocks = [
         {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "Request has been approved!"
-      }
-    }
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "Request has been approved!"
+                }
+        }
     ]
-    client.views_update(
-        view_id=body['view']['id'],
-        view={
+
+    ack(response_action="update", view={
             "type": "modal",
             "callback_id": "close_views",
             "title": {"type": "plain_text", "text": "Success!"},
             "submit": {"type": "plain_text", "text": "OK"},
             "blocks": blocks
-        }
-    )
+        })
+        
 
 
 

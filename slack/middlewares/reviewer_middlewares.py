@@ -1,6 +1,7 @@
 import requests
 import json
-from datetime import datetime   
+from datetime import datetime
+from slack.services import users_list
 
 
 def get_request_details(context, body, next=None):
@@ -27,7 +28,7 @@ def get_request_details(context, body, next=None):
 
 def create_change_status_blocks(context, next):
     request = context['request']
-    creator = request['creator']
+    creator = users_list[request['creator']]
     status_extended = request['status_extended']
     bonus_type = request['bonus_type']
     description = request['description']
