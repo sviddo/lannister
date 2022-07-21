@@ -28,11 +28,10 @@ from slack import app
 #     return users_to_add
     
 def get_user_roles(user_id):
-    users_data = requests.get('http://127.0.0.1:8000/api/users')
-    users = json.loads(users_data.text)
-    user_in_db = list(filter(lambda user: user["service_id"] == user_id, users))[0]
+    user_data = requests.get(f'http://127.0.0.1:8000/api/user/{user_id}')
+    user = json.loads(user_data.text)
 
-    return user_in_db['roles']
+    return user['roles']
 
 
 users_list = {}

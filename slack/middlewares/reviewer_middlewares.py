@@ -25,7 +25,6 @@ def get_request_details(context, body, next=None):
     return context['request']
 
 
-
 def create_change_status_blocks(context, next):
     request = context['request']
     creator = users_list[request['creator']]

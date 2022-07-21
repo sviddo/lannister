@@ -1,5 +1,5 @@
 from django.views.decorators.csrf import csrf_exempt
-from slack_bolt import App
+from slack import app
 from slack_bolt.adapter.django import SlackRequestHandler
 from datetime import datetime
 
@@ -22,13 +22,8 @@ from .services import (
     requests_blocks,
     users_list,
 )
-import os, requests, json
+import requests, json
 
-app = App(
-    #get tokens in the app, do not push to github!!!
-    token=os.environ.get("SLACK_BOT_TOKEN"),
-    signing_secret=os.environ.get("SLACK_SIGNING_SECRET")
-)
 
 handler = SlackRequestHandler(app=app)
 
@@ -44,9 +39,11 @@ def update_home_tab(client, event, logger):
 
     # check the role of the user who opened the home tab
     # thereafter build blocks accordinly
-    if 'r' in get_user_roles(user_id):
-        blocks = wh.reviewer_home_blocks()
+    if 'cw' in get_user_roles(user_id):
+        blocks = wh.worker_home_blocks()
         view['blocks'].extend(blocks)
+
+    if 'r' in get_user_roles(user_id):
         reviewer_blocks = rh.reviewer_home_blocks()
         view['blocks'].extend(reviewer_blocks)
         assigned_requests = get_assigned_requests(user_id)
@@ -57,10 +54,11 @@ def update_home_tab(client, event, logger):
         blocks = ah.admin_home_blocks()
         view['blocks'].extend(blocks)
 
-        # temporary add reviewer functionality
+        # temporary add worker & reviewer functionalities
         # to admin for testing purposes
-        blocks = wh.reviewer_home_blocks()
+        blocks = wh.worker_home_blocks()
         view['blocks'].extend(blocks)
+
 
     try:
         client.views_publish(user_id=user_id, view=view)
@@ -173,6 +171,7 @@ def show_requests(ack, client, body, context):
         view={
             "type": "modal",
             "callback_id": "see_requests_modal_submission",
+            "external_id": "see_user_requests",
             "title": {"type": "plain_text", "text": "My requests"},
             "blocks": blocks
         }
@@ -197,23 +196,20 @@ def edit_request(ack, body, client, context):
         }
     )
 
-@app.view("edit_request_submission")
-def update_request(ack, body, logger, context):
+@app.view("edit_request_submission", middleware=[wm.get_requests, wm.create_see_requests_blocks])
+def update_request(ack, body, client, context):
     ack()
-    print(body['view']['state']['values'])
 
     # get all the values the user has submitted
     submited_values = body['view']['state']['values']
     
-
     # assign the values to the variables
-    # which we'll need to create a new request in db
+    # which we'll need to edit the request in db
     bonus_type = submited_values['bonus_type']['bonus']['value']
     request_description = submited_values['request_description']['bonus']['value']
     request_reviewer = submited_values['request_reviewer']['bonus']['selected_option']['value']
     request_id = body['view']['private_metadata']
 
-    # make an object with request info
     request = {
         "reviewer": request_reviewer,
         "bonus_type": bonus_type,
@@ -222,7 +218,8 @@ def update_request(ack, body, logger, context):
 
     # put request to db
     uri = f"http://127.0.0.1:8000/api/request/{request_id}"
-    r = requests.patch(uri, json=request)
+    requests.patch(uri, json=request)
+
 
     # TODO: validate the response
 
@@ -231,6 +228,24 @@ def update_request(ack, body, logger, context):
     #       that he has a new request assigned
     #       in case if the user changed the reviewer
     #       notify the old one as well (??)
+
+
+    blocks = context['blocks']
+    for block in blocks:
+        if block['block_id'] == f'{request_id}_name':
+            block['text']['text'] = request["bonus_type"]
+  
+    client.views_update(
+        external_id="see_user_requests",
+        view={
+            "type": "modal",
+            "external_id": "see_user_requests",
+            "callback_id": "see_requests_modal_submission",
+            "title": {"type": "plain_text", "text": "My request"},
+            "blocks": blocks
+        }
+    )
+
 
 @app.action("delete_request", middleware=[wm.get_requests, wm.get_request_details, wm.create_see_requests_blocks])
 def handle_some_action(ack, body, context, client):
@@ -252,7 +267,6 @@ def handle_some_action(ack, body, context, client):
             "blocks": blocks
         }
     )
-
 
 
 @app.action("view_assigned_requests_modal")
@@ -286,7 +300,6 @@ def edit_request(ack, body, client, context):
             "blocks": blocks
         }
     )
-
 
 
 @app.action("reject_request")
@@ -337,7 +350,6 @@ def close_views(ack):
     ack(response_action="clear")
 
 
-
 @app.action("approve_request")
 def approve_request(ack, body, client):
     ack()
@@ -385,7 +397,6 @@ def approve_request(ack, body, client):
     )
 
 
-
 @app.view("make_request_approved")
 def make_request_approved(ack, body, client):
     paymant_day = list(body['view']['state']['values'].values())[0]['datepicker-action']['selected_date']
@@ -428,7 +439,6 @@ Creation time: {request_context['creation_time']}")
             "blocks": blocks
         })
         
-
 
 
 @app.action("datepicker-action")
