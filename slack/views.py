@@ -67,7 +67,7 @@ def update_home_tab(client, event, logger):
 
 
 @app.view("admin_view")
-def handle_view1_submission(ack, body, client):
+def change_role_submission(ack, body, client):
     ack()
     client.chat_postMessage(channel=body['user']['id'], text="Just wanted to inform you that all the changes has been made and user roles have been updated successfully")
 
@@ -89,6 +89,22 @@ def handle_some_action(ack, context, client, body):
         }
     )
 
+@app.action("show_requests_modal", middleware=[am.get_requests, am.create_request_blocks])
+def show_all_requests(ack, client, body, context):
+    ack()
+
+    blocks = context['blocks']
+    print(context['requests'])
+
+    client.views_open(
+        trigger_id=body['trigger_id'],
+        view={
+            "type": "modal",
+            "callback_id": "new_request_submission",
+            "title": {"type": "plain_text", "text": "Requests"},
+            "blocks": blocks
+        }
+    )
 
 @app.action("user_role_has_been_changed")
 def aknowladge(ack, body, context):

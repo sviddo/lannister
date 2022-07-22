@@ -23,7 +23,8 @@ def admin_home_blocks():
                     "text": {
                     "type": "plain_text",
                     "text": "Show Requests"
-                    }
+                    },
+                    "action_id": "show_requests_modal"
                 }
             ]
         }
