@@ -94,7 +94,7 @@ def show_all_requests(ack, client, body, context):
     ack()
 
     blocks = context['blocks']
-    print(context['requests'])
+
 
     client.views_open(
         trigger_id=body['trigger_id'],
@@ -102,6 +102,23 @@ def show_all_requests(ack, client, body, context):
             "type": "modal",
             "callback_id": "new_request_submission",
             "title": {"type": "plain_text", "text": "Requests"},
+            "blocks": blocks
+        }
+    )
+
+@app.action("request_history_modal", middleware=[ am.get_requests, am.get_request_history, am.create_request_history_blocks])
+def create_requst_history_modal(ack, client, body, context):
+    ack()
+
+    request_id = body['actions'][0]['block_id']
+    blocks = context['blocks']
+    client.views_push(
+        trigger_id=body['trigger_id'],
+        view={
+            "type": "modal",
+            "callback_id": "show_reqest_history",
+            "private_metadata": f"{request_id}",
+            "title": {"type": "plain_text", "text": "History"},
             "blocks": blocks
         }
     )
@@ -182,12 +199,13 @@ def show_requests(ack, client, body, context):
 
     ack()
     blocks = context['blocks']
+    print(blocks)
     client.views_open(
         trigger_id=body['trigger_id'],
         view={
             "type": "modal",
             "callback_id": "see_requests_modal_submission",
-            "external_id": "see_user_requests",
+            "external_id": "user_requests",
             "title": {"type": "plain_text", "text": "My requests"},
             "blocks": blocks
         }
@@ -252,10 +270,10 @@ def update_request(ack, body, client, context):
             block['text']['text'] = request["bonus_type"]
   
     client.views_update(
-        external_id="see_user_requests",
+        external_id="user_requests",
         view={
             "type": "modal",
-            "external_id": "see_user_requests",
+            "external_id": "user_requests",
             "callback_id": "see_requests_modal_submission",
             "title": {"type": "plain_text", "text": "My request"},
             "blocks": blocks

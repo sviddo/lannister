@@ -95,7 +95,10 @@ def get_requests(context, next):
     """Get the list of all the request belonging to the current user"""
     user_id = context["user_id"]
     user_requests = requests.get(f'http://127.0.0.1:8000/api/requests/{user_id}')
-    context['requests'] = json.loads(user_requests.text)
+    if user_requests.status_code == 400:
+        context['requests'] = None
+    else:
+        context['requests'] = json.loads(user_requests.text)
     
     next()
 
@@ -119,43 +122,54 @@ def create_see_requests_blocks(context, next):
 
     requests = context['requests']
     blocks = []
-    for request in requests:
-        blocks.extend([
-            {
-                "type": "section",
-                "block_id": f"{request['id']}_name",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"{request['bonus_type']}"
-                }
-            },
-            {
-                "type": "actions",
-                "block_id": f"{request['id']}",
-                "elements": [
-                    {
-                        "type": "button",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "Edit",
-                        },
-                        "value": "edit",
-                        "action_id": "edit_request"
-                    },
-                    {
-                        "type": "button",
-                        "style": "danger",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "Delete",
-                        },
-                        "value": "delete",
-                        "action_id": "delete_request"
+    print(requests)
+    if requests:
+        for request in requests:
+            blocks.extend([
+                {
+                    "type": "section",
+                    "block_id": f"{request['id']}_name",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"{request['bonus_type']}"
                     }
-			    ]
-		    }
-        ]
-        )
+                },
+                {
+                    "type": "actions",
+                    "block_id": f"{request['id']}",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Edit",
+                            },
+                            "value": "edit",
+                            "action_id": "edit_request"
+                        },
+                        {
+                            "type": "button",
+                            "style": "danger",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Delete",
+                            },
+                            "value": "delete",
+                            "action_id": "delete_request"
+                        }
+                    ]
+                }
+            ]
+            )
+    else:
+        blocks = {
+			"type": "header",
+			"text": {
+				"type": "mrkdwn",
+				"text": "There's nothing to show yet  🤷",
+				"emoji": True
+			}
+		}
 
     context['blocks'] = blocks
     next()
@@ -215,7 +229,7 @@ def create_edit_request_blocks(context, next):
                 "type": "static_select",
                 "placeholder": {
                     "type": "plain_text",
-                    "text": "Select an item",
+                    "text": "Select a reviewer",
                 },
                 "options": options,
                 "initial_option":  {
