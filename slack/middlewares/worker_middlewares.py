@@ -162,14 +162,13 @@ def create_see_requests_blocks(context, next):
             ]
             )
     else:
-        blocks = {
+        blocks = [{
 			"type": "header",
 			"text": {
-				"type": "mrkdwn",
-				"text": "There's nothing to show yet  🤷",
-				"emoji": True
+				"type": "plain_text",
+				"text": "There's nothing to show yet",
 			}
-		}
+		}]
 
     context['blocks'] = blocks
     next()
