@@ -258,6 +258,7 @@ def handle_some_action(ack, body, context, client):
 @app.action("view_assigned_requests_modal")
 def view_assigned_requests(ack, client, body):
     ack()
+
     client.views_open(
         trigger_id=body['trigger_id'],
         view={
@@ -289,7 +290,7 @@ def edit_request(ack, body, client, context):
 
 
 @app.action("reject_request")
-def reject_request(body, client):
+def reject_request(ack, body, client):
     uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
     data = {
         "status": "r"
@@ -317,6 +318,8 @@ Creation time: {request_context['creation_time']}")
       }
     }
     ]
+
+    ack(response_action="update")
     client.views_update(
         view_id=body['view']['id'],
         view={
