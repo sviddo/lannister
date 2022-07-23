@@ -122,7 +122,7 @@ def create_see_requests_blocks(context, next):
 
     requests = context['requests']
     blocks = []
-    print(requests)
+    
     if requests:
         for request in requests:
             blocks.extend([

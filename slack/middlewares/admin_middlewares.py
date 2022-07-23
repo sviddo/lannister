@@ -70,54 +70,67 @@ def create_blocks(context, next):
 
 def get_requests(context, next):
     requests_data = requests.get('http://127.0.0.1:8000/api/requests')
-    all_requests = json.loads(requests_data.text)
-
-    context["requests"] = all_requests
+    
+    if requests_data.status_code == 400:
+        context['requests'] = None
+    else:
+        context['requests']  = json.loads(requests_data.text)
     next()
 
 def create_request_blocks(context, next):
     requests = context['requests']
     blocks = []
-    for request in requests:
-        creation_time = dt.strptime(request['creation_time'], '%Y-%m-%dT%H:%M:%S.%fZ')
-        creation_time_parsed = f"{creation_time.year}-{creation_time.month}-{creation_time.day}  {creation_time.hour}:{creation_time.minute}:{creation_time.second}"
-        message = f"*Creator:* <@{request['creator']}>\n*Reviewer:* <@{request['reviewer']}>\n*Creation time:* {creation_time_parsed}\n "
-        blocks.extend(  
-            [
-                {
-                    "type": "section",
-                    "block_id": f"{request['id']}",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"{request['bonus_type']}"
-                    },
-                    "accessory": {
-                        "type": "button",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "Request History"
-                        },
-                        "value": "see_request_history",
-                        "action_id": "request_history_modal"
-                    }
-                },
-                {
-                    "type": "context",
-                    "elements": [
-                        {
-                            "type": "mrkdwn",
-                            "text": message
-                        }
-                    ]
-                },
-                {
-                    "type": "divider"
-                }
-            ]
-        )
 
-    # get rid off the last diider block
-    del(blocks[-1])
+    if requests:
+        for request in requests:
+            creation_time = dt.strptime(request['creation_time'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            creation_time_parsed = f"{creation_time.year}-{creation_time.month}-{creation_time.day}  {creation_time.hour}:{creation_time.minute}:{creation_time.second}"
+            message = f"*Creator:* <@{request['creator']}>\n*Reviewer:* <@{request['reviewer']}>\n*Creation time:* {creation_time_parsed}\n "
+            blocks.extend(  
+                [
+                    {
+                        "type": "section",
+                        "block_id": f"{request['id']}",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"{request['bonus_type']}"
+                        },
+                        "accessory": {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Request History"
+                            },
+                            "value": "see_request_history",
+                            "action_id": "request_history_modal"
+                        }
+                    },
+                    {
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "mrkdwn",
+                                "text": message
+                            }
+                        ]
+                    },
+                    {
+                        "type": "divider"
+                    }
+                ]
+            )
+
+        # get rid off the last divider block
+        del(blocks[-1])
+
+    else:
+        blocks = [{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "There's nothing to show yet",
+			}
+		}]
 
     context['blocks'] = blocks
     next()
