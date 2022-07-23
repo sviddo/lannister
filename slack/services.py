@@ -49,7 +49,7 @@ def get_user_list(assigned_requests, app):
 
 def get_assigned_requests(reviewer_id):
     assigned_requests = requests.get(f'http://127.0.0.1:8000/api/reviewer_requests/{reviewer_id}')
-    assigned_requests = json.loads(assigned_requests.text)
+    assigned_requests = assigned_requests.json()
     non_reviewed_requests = []
     for request in assigned_requests:
         if request['status'] in ('c', 'e'):
@@ -59,13 +59,28 @@ def get_assigned_requests(reviewer_id):
 
 
 
-requests_blocks = []
+requests_blocks = [{
+    "type": "header",
+    "text": {
+        "type": "plain_text",
+        "text": "We are loading your requests! Please, try again in a few seconds ...",
+    }
+}]
 
 
 def create_assigned_requests_blocks(assigned_requests):
     """Returns dictionary object wich will be
     passed to 'see_requests' modal to build it.
     Presents all user's reqest with possibility to edit."""
+    if not assigned_requests:
+        return [{
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "There are no assigned requests for you :man-shrugging:",
+                "emoji": True
+            }
+        }]
 
     global user_list
     users_list = get_user_list(assigned_requests, app)
