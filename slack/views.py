@@ -317,11 +317,11 @@ def reject_request(ack, body, client):
     requests.patch(url=uri, json=data)
 
     channel_id = app.client.conversations_open(users=request_context['creator'])['channel']['id']
-    app.client.chat_postMessage(channel=channel_id, text=f"Unfortunately your request with following data was rejected:\n\
-Reviewer: @{users_list[request_context['reviewer']]}\n\
-Bonus_type: {request_context['bonus_type']}\n\
-Description: {request_context['description']}\n\
-Creation time: {request_context['creation_time']}")
+    app.client.chat_postMessage(channel=channel_id, text=f":pensive: *Unfortunately your request with following data was rejected:*\n\
+*Reviewer*: @{users_list[request_context['reviewer']]}\n\
+*Bonus_type*: {request_context['bonus_type']}\n\
+*Description*: {request_context['description']}\n\
+*Creation time*: {request_context['creation_time']}")
     
     global requests_blocks
 
@@ -362,11 +362,6 @@ Creation time: {request_context['creation_time']}")
     )
 
 
-@app.view("close_views")
-def close_views(ack):
-    ack(response_action="clear")
-
-
 
 @app.action("approve_request")
 def approve_request(ack, body, client):
@@ -376,8 +371,7 @@ def approve_request(ack, body, client):
     initial_year = initial_date.year
     initial_month = initial_date.month
     initial_day = initial_date.day
-    text = ""
-    text += f"*Creator:* @{users_list[request_context['creator']]}\n"
+    text = f"*Creator:* @{users_list[request_context['creator']]}\n"
     text += f"*Bonus_type:* {request_context['bonus_type']}\n"
     text += f"*Status:* approved\n"
     text += f"*Description:* {request_context['description']}\n"
@@ -430,11 +424,11 @@ def make_request_approved(ack, body, client):
     requests.patch(url=uri, json=data)
 
     channel_id = app.client.conversations_open(users=request_context['creator'])['channel']['id']
-    app.client.chat_postMessage(channel=channel_id, text=f"Congratulations! Your request with following data was approved:\n\
-Reviewer: @{users_list[request_context['reviewer']]}\n\
-Bonus_type: {request_context['bonus_type']}\n\
-Description: {request_context['description']}\n\
-Creation time: {request_context['creation_time']}")
+    app.client.chat_postMessage(channel=channel_id, text=f":tada: *Congratulations! Your request with following data was approved:*\n\
+*Reviewer*: @{users_list[request_context['reviewer']]}\n\
+*Bonus_type*: {request_context['bonus_type']}\n\
+*Description*: {request_context['description']}\n\
+*Creation time*: {request_context['creation_time']}")
 
 
     global requests_blocks
