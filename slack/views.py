@@ -37,6 +37,8 @@ def update_home_tab(client, event, logger):
     view = gh.header()
     blocks = []
 
+    print(get_user_roles(user_id))
+
     # check the role of the user who opened the home tab
     # thereafter build blocks accordinly
     if 'cw' in get_user_roles(user_id):
@@ -275,7 +277,7 @@ def update_request(ack, body, client, context):
             "type": "modal",
             "external_id": "user_requests",
             "callback_id": "see_requests_modal_submission",
-            "title": {"type": "plain_text", "text": "My request"},
+            "title": {"type": "plain_text", "text": "My requests"},
             "blocks": blocks
         }
     )
