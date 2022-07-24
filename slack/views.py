@@ -258,6 +258,22 @@ def handle_some_action(ack, body, context, client):
 @app.action("view_assigned_requests_modal")
 def view_assigned_requests(ack, client, body):
     ack()
+    global requests_blocks
+
+    if len(requests_blocks) > 1:
+        for i, request in enumerate(requests_blocks):
+            if 'block_id' not in request:
+                del requests_blocks[i]
+                break
+    elif len(requests_blocks) == 1 and requests_blocks[0]['text']['text'].endswith("Request has been rejected!"):
+        requests_blocks = [{
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "There are no assigned requests for you :man-shrugging:",
+                "emoji": True
+            }
+        }]
 
     client.views_open(
         trigger_id=body['trigger_id'],
@@ -278,8 +294,8 @@ def edit_request(ack, body, client, context):
     global request_context
     request_context = context['request']
     blocks = context['blocks']
-    client.views_push(
-        trigger_id=body['trigger_id'],
+    client.views_update(
+        view_id=body['view']['id'],
         view={
             "type": "modal",
             "title": {"type": "plain_text", "text": "Change request status"},
@@ -291,6 +307,7 @@ def edit_request(ack, body, client, context):
 
 @app.action("reject_request")
 def reject_request(ack, body, client):
+    ack()
     uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
     data = {
         "status": "r"
@@ -303,31 +320,42 @@ Reviewer: @{users_list[request_context['reviewer']]}\n\
 Bonus_type: {request_context['bonus_type']}\n\
 Description: {request_context['description']}\n\
 Creation time: {request_context['creation_time']}")
+    
+    global requests_blocks
 
     for i, request in enumerate(requests_blocks):
-        if int(request['block_id']) == request_context['id']:
+        if 'block_id' not in request:
             del requests_blocks[i]
             break
 
-    blocks = [
-        {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "Request has been rejected!"
-      }
-    }
-    ]
+    if not len(requests_blocks):
+        requests_blocks = [{
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "There are no assigned requests for you :man-shrugging:",
+                "emoji": True
+            }
+        }]
+    else:
+        for i, request in enumerate(requests_blocks):
+            if int(request['block_id']) == request_context['id']:
+                requests_blocks[i] = {
+                    "type": "section",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":white_check_mark: Request has been rejected!",
+                        "emoji": True
+                    }
+                }
+                break
 
-    ack(response_action="update")
     client.views_update(
         view_id=body['view']['id'],
         view={
             "type": "modal",
-            "callback_id": "close_views",
-            "title": {"type": "plain_text", "text": "Success!"},
-            "submit": {"type": "plain_text", "text": "OK"},
-            "blocks": blocks
+            "title": {"type": "plain_text", "text": "Assigned requests"},
+            "blocks": requests_blocks
         }
     )
 
