@@ -107,9 +107,6 @@ def get_request_details(context, next, body):
     user_id = context['user_id']
     request_id = body['actions'][0]['block_id']
     user_requests = json.loads(requests.get(f'http://127.0.0.1:8000/api/requests/{user_id}').text)
-    # for r in user_requests:
-    #     if r['id'] == int(request_id):
-    #         print(r)
     req_details = list(filter(lambda request: request['id'] == int(request_id), user_requests))[0]
     context['request'] = req_details
     

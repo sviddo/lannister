@@ -36,8 +36,6 @@ def update_home_tab(client, event, logger):
     view = gh.header()
     blocks = []
 
-    print(get_user_roles(user_id))
-
     # check the role of the user who opened the home tab
     # thereafter build blocks accordinly
     if 'cw' in get_user_roles(user_id):
@@ -204,13 +202,12 @@ def show_requests(ack, client, body, context):
 
     ack()
     blocks = context['blocks']
-    print(blocks)
     client.views_open(
         trigger_id=body['trigger_id'],
         view={
             "type": "modal",
             "callback_id": "see_requests_modal_submission",
-            "external_id": "user_requests",
+            "external_id": "se_user_requests",
             "title": {"type": "plain_text", "text": "My requests"},
             "blocks": blocks
         }
@@ -222,21 +219,24 @@ def edit_request(ack, body, client, context):
     ack()
     blocks = context['blocks']
     request_id = context['request']['id']
+    request_reviewer = context['request']['reviewer']
 
     client.views_push(
         trigger_id=body['trigger_id'],
         view={
             "type": "modal",
             "callback_id": "edit_request_submission",
-            "private_metadata": f"{request_id}",
+            "private_metadata": f"{request_id}, {request_reviewer}",
             "title": {"type": "plain_text", "text": "Edit request"},
             "submit": {"type": "plain_text", "text": "Submit"},
             "blocks": blocks
         }
     )
 
+
+
 @app.view("edit_request_submission", middleware=[wm.get_requests, wm.create_see_requests_blocks])
-def update_request(ack, body, client, context):
+def update_request(ack, body, client, context, say):
     ack()
 
     # get all the values the user has submitted
@@ -247,7 +247,7 @@ def update_request(ack, body, client, context):
     bonus_type = submited_values['bonus_type']['bonus']['value']
     request_description = submited_values['request_description']['bonus']['value']
     request_reviewer = submited_values['request_reviewer']['bonus']['selected_option']['value']
-    request_id = body['view']['private_metadata']
+    request_id, initial_reviewer = body['view']['private_metadata'].split(', ')
 
     request = {
         "reviewer": request_reviewer,
@@ -257,16 +257,19 @@ def update_request(ack, body, client, context):
 
     # put request to db
     uri = f"http://127.0.0.1:8000/api/request/{request_id}"
-    requests.patch(uri, json=request)
-
+    r = requests.patch(uri, json=request)
 
     # TODO: validate the response
-
-    # TODO: if all good notify the user
-    #       that all good and notify the reviewer
-    #       that he has a new request assigned
-    #       in case if the user changed the reviewer
-    #       notify the old one as well (??)
+    if request_reviewer == initial_reviewer:
+        say(
+            channel=request_reviewer, 
+            text=f"<@{body['user']['id']}> has modified his request '{bonus_type}' just now, take a look!"
+        )
+    else:
+        say(
+            channel=request_reviewer, 
+            text=f"<@{body['user']['id']}> has assigned the new request for you just now, take a look!"
+        )
 
 
     blocks = context['blocks']
@@ -275,10 +278,10 @@ def update_request(ack, body, client, context):
             block['text']['text'] = request["bonus_type"]
   
     client.views_update(
-        external_id="user_requests",
+        external_id="se_user_requests",
         view={
             "type": "modal",
-            "external_id": "user_requests",
+            "external_id": "se_user_requests",
             "callback_id": "see_requests_modal_submission",
             "title": {"type": "plain_text", "text": "My requests"},
             "blocks": blocks
