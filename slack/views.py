@@ -142,7 +142,7 @@ def aknowladge(ack, body, context):
 
 
 @app.view("new_request_submission")
-def create_new_request(ack, body, logger):
+def create_new_request(ack, body, say):
     ack()
 
     # get all the values the user has submitted
@@ -167,11 +167,14 @@ def create_new_request(ack, body, logger):
     uri = "http://127.0.0.1:8000/api/create_request"
     r = requests.post(uri, json=request)
 
-    # TODO: validate the response
-
-    # TODO: if all good notify the user
-    #       that all good and nofy the reviewer
-    #       theat he has a new request assigned
+    # validate the response
+    # inform the reviewer about new reqest
+    if r.status_code == 200:
+        say(
+            channel=request_reviewer, 
+            text=f"You've just recieved a new bonus request from <@{body['user']['id']}>.\
+            Take a look in the app home!"
+        )
 
 @app.action("create_request_modal", middleware=[wm.get_reviewers, wm.create_reviewer_block, wm.create_make_request_view])
 def create_request(ack, client, body, context):
