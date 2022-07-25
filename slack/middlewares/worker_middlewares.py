@@ -98,7 +98,10 @@ def get_requests(context, next):
     if user_requests.status_code == 400:
         context['requests'] = None
     else:
-        context['requests'] = json.loads(user_requests.text)
+        user_requests =  json.loads(user_requests.text)
+        valide = [request for request in user_requests if request['status'] in ('c', 'e')]
+        context['requests'] = valide
+        print(valide)
     
     next()
 

@@ -207,7 +207,7 @@ def show_requests(ack, client, body, context):
         view={
             "type": "modal",
             "callback_id": "see_requests_modal_submission",
-            "external_id": "se_user_requests",
+            "external_id": "user_requestss",
             "title": {"type": "plain_text", "text": "My requests"},
             "blocks": blocks
         }
@@ -278,10 +278,10 @@ def update_request(ack, body, client, context, say):
             block['text']['text'] = request["bonus_type"]
   
     client.views_update(
-        external_id="se_user_requests",
+        external_id="user_requestss",
         view={
             "type": "modal",
-            "external_id": "se_user_requests",
+            "external_id": "user_requestss",
             "callback_id": "see_requests_modal_submission",
             "title": {"type": "plain_text", "text": "My requests"},
             "blocks": blocks
