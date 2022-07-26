@@ -1,3 +1,4 @@
+from queue import PriorityQueue
 from django.views.decorators.csrf import csrf_exempt
 from slack import app
 from slack_bolt.adapter.django import SlackRequestHandler
@@ -46,10 +47,10 @@ def update_home_tab(client, event, logger):
     if 'r' in user_roles:
         reviewer_blocks = rh.reviewer_home_blocks()
         view['blocks'].extend(reviewer_blocks)
-        assigned_requests = get_assigned_requests(user_id)
-        global requests_blocks
-        from .services import requests_blocks
-        requests_blocks = create_assigned_requests_blocks(assigned_requests)
+        # assigned_requests = get_assigned_requests(user_id)
+        # global requests_blocks
+        # from .services import requests_blocks
+        # requests_blocks = create_assigned_requests_blocks(assigned_requests)
 
     if 'a' in user_roles:
         blocks = ah.admin_home_blocks()
@@ -72,7 +73,7 @@ def change_role_submission(ack, body, client):
     ack()
     client.chat_postMessage(channel=body['user']['id'], text="Just wanted to inform you that all the changes has been made and user roles have been updated successfully")
 
-@app.action("change_role_modal", middleware=[am.get_all_users_but_self, am.create_blocks])
+@app.action("change_role_modal", middleware=[am.get_all_users_but_self, am.create_user_role_blocks])
 def handle_some_action(ack, context, client, body):
     ack()
 
@@ -312,20 +313,14 @@ def handle_some_action(ack, body, context, client):
     )
 
 
-@app.action("view_assigned_requests_modal")
-def view_assigned_requests(ack, client, body):
+@app.action("view_assigned_requests_modal", middleware=[rm.get_reviewer_requests])
+def view_assigned_requests(ack, client, body, context):
     ack()
-    global requests_blocks
+    requests = context['requests']
+    blocks = []
 
-    if len(requests_blocks) > 1:
-        for i, request in enumerate(requests_blocks):
-            if 'block_id' not in request:
-                del requests_blocks[i]
-                break
-    elif (len(requests_blocks) == 1 
-        and (requests_blocks[0]['text']['text'].endswith("Request has been rejected!")
-        or requests_blocks[0]['text']['text'].endswith("Request has been approved!"))):
-        requests_blocks = [{
+    if not requests:
+        blocks = [{
             "type": "header",
             "text": {
                 "type": "plain_text",
@@ -333,39 +328,37 @@ def view_assigned_requests(ack, client, body):
                 "emoji": True
             }
         }]
+    else:
+        blocks = create_assigned_requests_blocks(requests)
 
     client.views_open(
         trigger_id=body['trigger_id'],
         view={
             "type": "modal",
             "title": {"type": "plain_text", "text": "Assigned requests"},
-            "blocks": requests_blocks
+            "blocks": blocks
         }
     )
-
-
-request_context = None
-
 
 @app.action("change_request_status", middleware=[rm.get_request_details, rm.create_change_status_blocks])
 def edit_request(ack, body, client, context):
     ack()
-    global request_context
-    request_context = context['request']
     blocks = context['blocks']
-    client.views_update(
-        view_id=body['view']['id'],
+    client.views_push(
+        trigger_id=body['trigger_id'],
         view={
             "type": "modal",
+            "private_metadata": f"{body['view']['id']}",
             "title": {"type": "plain_text", "text": "Change request status"},
             "blocks": blocks
         }
     )
 
 
-@app.action("reject_request")
-def reject_request(ack, body, client):
+@app.action("reject_request", middleware=[rm.get_request_details, rm.get_reviewer_requests])
+def reject_request(ack, body, client, context):
     ack(response_action="update")
+    request_context = context['request']
     uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
     data = {
         "status": "r"
@@ -378,16 +371,32 @@ def reject_request(ack, body, client):
 *Bonus_type*: {request_context['bonus_type']}\n\
 *Description*: {request_context['description']}\n\
 *Creation time*: {request_context['creation_time']}")
-    
-    global requests_blocks
 
-    for i, request in enumerate(requests_blocks):
-        if 'block_id' not in request:
-            del requests_blocks[i]
-            break
+    #update the original view
+    client.views_update(
+        view_id=body['view']['id'],
+        view={
+            "type": "modal",
+            "title": {"type": "plain_text", "text": "Assigned requests"},
+            "blocks": [{
+                    "type": "section",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":white_check_mark: Request has been rejected!",
+                        "emoji": True
+                    }
+                }]
+        }
+    )
 
-    if not len(requests_blocks):
-        requests_blocks = [{
+    # update the previous view with
+    # rejected request excluded
+    reviewer_requests = context['requests']
+    requests_blocks = create_assigned_requests_blocks(reviewer_requests)
+    updated_blocks = [block for block in requests_blocks if block['block_id'] != str(request_context['id'])]
+
+    if not updated_blocks:
+        updated_blocks = [{
             "type": "header",
             "text": {
                 "type": "plain_text",
@@ -395,34 +404,22 @@ def reject_request(ack, body, client):
                 "emoji": True
             }
         }]
-    else:
-        for i, request in enumerate(requests_blocks):
-            if int(request['block_id']) == request_context['id']:
-                requests_blocks[i] = {
-                    "type": "section",
-                    "text": {
-                        "type": "plain_text",
-                        "text": ":white_check_mark: Request has been rejected!",
-                        "emoji": True
-                    }
-                }
-                break
 
     client.views_update(
-        view_id=body['view']['id'],
+        view_id=body['view']['previous_view_id'],
         view={
             "type": "modal",
             "title": {"type": "plain_text", "text": "Assigned requests"},
-            "blocks": requests_blocks
+            "blocks": updated_blocks
         }
     )
 
 
 
-@app.action("approve_request")
-def approve_request(ack, body, client):
+@app.action("approve_request", middleware=[rm.get_request_details])
+def approve_request(ack, body, client, context):
     ack()
-    body['view']['blocks'].pop(-1)
+    request_context = context['request']
     initial_date = get_initial_date()
     initial_year = initial_date.year
     initial_month = initial_date.month

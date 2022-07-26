@@ -10,6 +10,7 @@ def get_request_details(context, body, next=None):
     user_requests = json.loads(requests.get(f'http://127.0.0.1:8000/api/reviewer_requests/{reviewer_id}').text)
 
     request_details = list(filter(lambda request: request['id'] == int(request_id), user_requests))[0]
+    print(request_details)
     extended_statuses = {
         "c": "created",
         "e": "edited"
@@ -19,10 +20,8 @@ def get_request_details(context, body, next=None):
     request_details['status_extended'] = extended_statuses[request_details['status']]
     context['request'] = request_details
 
-    if next:
-        next()
+    next()
 
-    return context['request']
 
 
 def create_change_status_blocks(context, next):
@@ -71,4 +70,19 @@ def create_change_status_blocks(context, next):
 
     context['blocks'] = blocks
 
+    next()
+
+def get_reviewer_requests(context, next):
+    reviewer_id = context['user_id']
+    assigned_requests = requests.get(f'http://127.0.0.1:8000/api/reviewer_requests/{reviewer_id}')
+    if assigned_requests.status_code != 200:
+        context['requests'] = None
+    else:
+        assigned_requests = assigned_requests.json()
+        non_reviewed_requests = []
+        for request in assigned_requests:
+            if request['status'] in ('c', 'e'):
+                non_reviewed_requests.append(request)
+
+        context['requests'] = non_reviewed_requests
     next()
