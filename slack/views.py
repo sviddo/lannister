@@ -33,16 +33,17 @@ def events(request):
 @app.event('app_home_opened')
 def update_home_tab(client, event, logger):
     user_id=event["user"]
+    user_roles = get_user_roles(user_id)
     view = gh.header()
     blocks = []
 
     # check the role of the user who opened the home tab
     # thereafter build blocks accordinly
-    if 'cw' in get_user_roles(user_id):
+    if 'cw' in user_roles:
         blocks = wh.worker_home_blocks()
         view['blocks'].extend(blocks)
 
-    if 'r' in get_user_roles(user_id):
+    if 'r' in user_roles:
         reviewer_blocks = rh.reviewer_home_blocks()
         view['blocks'].extend(reviewer_blocks)
         assigned_requests = get_assigned_requests(user_id)
@@ -50,7 +51,7 @@ def update_home_tab(client, event, logger):
         from .services import requests_blocks
         requests_blocks = create_assigned_requests_blocks(assigned_requests)
 
-    if 'a' in get_user_roles(user_id):
+    if 'a' in user_roles:
         blocks = ah.admin_home_blocks()
         view['blocks'].extend(blocks)
 
@@ -167,11 +168,11 @@ def create_new_request(ack, body, say):
 
     # validate the response
     # inform the reviewer about new reqest
-    if r.status_code == 200:
+    if r.status_code == 201:
         say(
             channel=request_reviewer, 
-            text=f"You've just recieved a new bonus request from <@{body['user']['id']}>.\
-            Take a look in the app home!"
+            text=f"You've just recieved a new bonus request from <@{body['user']['id']}>. "\
+            "Take a look in the app home!"
         )
 
 @app.action("create_request_modal", middleware=[wm.get_reviewers, wm.create_reviewer_block, wm.create_make_request_view])
