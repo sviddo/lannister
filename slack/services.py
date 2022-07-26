@@ -28,7 +28,7 @@ from slack import app
 #     return users_to_add
     
 def get_user_roles(user_id):
-    users_data = requests.get('http://127.0.0.1:8000/api/users')
+    users_data = requests.get('https://app-cthojegtpq-uc.a.run.app/api/users')
     users = json.loads(users_data.text)
     user_in_db = list(filter(lambda user: user["service_id"] == user_id, users))[0]
 
@@ -49,7 +49,7 @@ def get_user_list(assigned_requests, app):
 
 
 def get_assigned_requests(reviewer_id):
-    assigned_requests = requests.get(f'http://127.0.0.1:8000/api/reviewer_requests/{reviewer_id}')
+    assigned_requests = requests.get(f'https://app-cthojegtpq-uc.a.run.app/api/reviewer_requests/{reviewer_id}')
     if assigned_requests.status_code != 200:
         return []
     assigned_requests = assigned_requests.json()

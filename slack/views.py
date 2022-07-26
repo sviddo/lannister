@@ -97,11 +97,11 @@ def aknowladge(ack, body, context):
     ack()  
     user_id = body['actions'][0]['block_id']
     user_role = body['actions'][0]['selected_option']['value']
-    users_data = requests.get('http://127.0.0.1:8000/api/users')
+    users_data = requests.get('https://app-cthojegtpq-uc.a.run.app/api/users')
     users = json.loads(users_data.text)
     user_in_db = list(filter(lambda user: user["service_id"] == user_id, users))[0]
 
-    uri = f"http://127.0.0.1:8000/api/reviewer_role/{user_id}"
+    uri = f"https://app-cthojegtpq-uc.a.run.app/api/reviewer_role/{user_id}"
     if user_role == "r" and user_role not in user_in_db["roles"]:
         requests.patch(uri)
     elif user_role == "cw" and "r" in user_in_db["roles"]:
@@ -131,7 +131,7 @@ def create_new_request(ack, body, logger):
     }
 
     # put request to db
-    uri = "http://127.0.0.1:8000/api/create_request"
+    uri = "https://app-cthojegtpq-uc.a.run.app/api/create_request"
     r = requests.post(uri, json=request)
 
     # TODO: validate the response
@@ -221,7 +221,7 @@ def update_request(ack, body, logger, context):
     }
 
     # put request to db
-    uri = f"http://127.0.0.1:8000/api/request/{request_id}"
+    uri = f"https://app-cthojegtpq-uc.a.run.app/api/request/{request_id}"
     r = requests.patch(uri, json=request)
 
     # TODO: validate the response
@@ -239,7 +239,7 @@ def handle_some_action(ack, body, context, client):
     request_id = context['request']['id']
     blocks = [block for block in context['blocks'] if not (block['block_id'] == str(request_id) or block['block_id'] == f'{request_id}_name')]
     
-    uri = f"http://127.0.0.1:8000/api/request/{request_id}"
+    uri = f"https://app-cthojegtpq-uc.a.run.app/api/request/{request_id}"
     requests.delete(uri)
 
     # updating the view with deleted blocks being removed
@@ -310,7 +310,7 @@ def edit_request(ack, body, client, context):
 @app.action("reject_request")
 def reject_request(ack, body, client):
     ack(response_action="update")
-    uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
+    uri = f"https://app-cthojegtpq-uc.a.run.app/api/request/{request_context['id']}"
     data = {
         "status": "r"
     }
@@ -415,7 +415,7 @@ def approve_request(ack, body, client):
 def make_request_approved(ack, body, client):
     paymant_day = list(body['view']['state']['values'].values())[0]['datepicker-action']['selected_date']
 
-    uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
+    uri = f"https://app-cthojegtpq-uc.a.run.app/api/request/{request_context['id']}"
     data = {
         "status": "a",
         "paymant_day": f"{paymant_day}"

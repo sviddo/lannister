@@ -7,7 +7,7 @@ from slack.services import users_list
 def get_request_details(context, body, next=None):
     reviewer_id = context['user_id']
     request_id = body['actions'][0]['block_id']
-    user_requests = json.loads(requests.get(f'http://127.0.0.1:8000/api/reviewer_requests/{reviewer_id}').text)
+    user_requests = json.loads(requests.get(f'https://app-cthojegtpq-uc.a.run.app/api/reviewer_requests/{reviewer_id}').text)
 
     request_details = list(filter(lambda request: request['id'] == int(request_id), user_requests))[0]
     extended_statuses = {

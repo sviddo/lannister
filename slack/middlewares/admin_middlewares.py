@@ -3,7 +3,7 @@ import requests, json
 def get_all_users_but_self(context, next):
     user_id = context["user_id"]
     users_but_me=[]
-    users_data = requests.get('http://127.0.0.1:8000/api/users')
+    users_data = requests.get('https://app-cthojegtpq-uc.a.run.app/api/users')
     users = json.loads(users_data.text)
     users_but_me = filter(lambda user: user["service_id"] != user_id, users)
 

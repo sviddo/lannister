@@ -3,7 +3,7 @@ import requests, json
 def get_reviewers(context, next):
     user_id = context["user_id"]
     users_but_me=[]
-    users_data = requests.get('http://127.0.0.1:8000/api/users')
+    users_data = requests.get('https://app-cthojegtpq-uc.a.run.app/api/users')
     users = json.loads(users_data.text)
     users_but_me = filter(lambda user: user["service_id"] != user_id and "r" in user["roles"], users)
     context["reviewers"] = list(users_but_me)
@@ -94,7 +94,7 @@ def create_make_request_view(context, next):
 def get_requests(context, next):
     """Get the list of all the request belonging to the current user"""
     user_id = context["user_id"]
-    user_requests = requests.get(f'http://127.0.0.1:8000/api/requests/{user_id}')
+    user_requests = requests.get(f'https://app-cthojegtpq-uc.a.run.app/api/requests/{user_id}')
     context['requests'] = json.loads(user_requests.text)
     
     next()
@@ -103,7 +103,7 @@ def get_request_details(context, next, body):
     """Get details about choosen request"""
     user_id = context['user_id']
     request_id = body['actions'][0]['block_id']
-    user_requests = json.loads(requests.get(f'http://127.0.0.1:8000/api/requests/{user_id}').text)
+    user_requests = json.loads(requests.get(f'https://app-cthojegtpq-uc.a.run.app/api/requests/{user_id}').text)
     # for r in user_requests:
     #     if r['id'] == int(request_id):
     #         print(r)
