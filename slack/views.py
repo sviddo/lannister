@@ -18,8 +18,7 @@ from .services import (
     get_user_roles, 
     get_assigned_requests, 
     create_assigned_requests_blocks, 
-    get_initial_date, 
-    users_list,
+    get_initial_date
 )
 import requests, json
 
@@ -319,10 +318,10 @@ def handle_some_action(ack, body, context, client):
     )
 
 
-@app.action("view_assigned_requests_modal", middleware=[rm.get_reviewer_requests])
+@app.action("view_assigned_requests_modal")
 def view_assigned_requests(ack, client, body, context):
     ack()
-    requests = context['requests']
+    requests = rm.get_reviewer_requests(context)
     blocks = []
 
     if not requests:
@@ -346,25 +345,36 @@ def view_assigned_requests(ack, client, body, context):
         }
     )
 
-@app.action("change_request_status", middleware=[rm.get_request_details, rm.create_change_status_blocks])
+@app.action("change_request_status")
 def edit_request(ack, body, client, context):
     ack()
-    blocks = context['blocks']
+
+    request_id = body['view']['blocks'][0]['block_id']
+    request = rm.get_request_details(context, request_id)
+
+    blocks = rm.create_change_status_blocks(request)
     client.views_push(
         trigger_id=body['trigger_id'],
         view={
             "type": "modal",
-            "private_metadata": f"{body['view']['id']}",
+            "private_metadata": f"{body['view']['id']}, {request_id}",
             "title": {"type": "plain_text", "text": "Change request status"},
             "blocks": blocks
         }
     )
 
 
-@app.action("reject_request", middleware=[rm.get_request_details, rm.get_reviewer_requests])
+@app.action("reject_request")
 def reject_request(ack, body, client, context):
-    ack(response_action="update")
-    request_context = context['request']
+    ack()
+    view_id, request_id = body['view']['private_metadata'].split(', ')
+    
+    request_context = rm.get_request_details(context, request_id)
+    reviewer_requests = rm.get_reviewer_requests(context)
+    requests_blocks = create_assigned_requests_blocks(reviewer_requests)
+    updated_blocks = [block for block in requests_blocks if block['block_id'] != str(request_context['id'])]
+
+    
     uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
     data = {
         "status": "r"
@@ -373,7 +383,7 @@ def reject_request(ack, body, client, context):
 
     channel_id = app.client.conversations_open(users=request_context['creator'])['channel']['id']
     app.client.chat_postMessage(channel=channel_id, text=f":pensive: *Unfortunately your request with following data was rejected:*\n\
-*Reviewer*: @{users_list[request_context['reviewer']]}\n\
+*Reviewer*: <@{request_context['reviewer']}>\n\
 *Bonus_type*: {request_context['bonus_type']}\n\
 *Description*: {request_context['description']}\n\
 *Creation time*: {request_context['creation_time']}")
@@ -395,12 +405,9 @@ def reject_request(ack, body, client, context):
         }
     )
 
+   
     # update the previous view with
     # rejected request excluded
-    reviewer_requests = context['requests']
-    requests_blocks = create_assigned_requests_blocks(reviewer_requests)
-    updated_blocks = [block for block in requests_blocks if block['block_id'] != str(request_context['id'])]
-
     if not updated_blocks:
         updated_blocks = [{
             "type": "header",
@@ -422,21 +429,23 @@ def reject_request(ack, body, client, context):
 
 
 
-@app.action("approve_request", middleware=[rm.get_request_details])
+@app.action("approve_request")
 def approve_request(ack, body, client, context):
     ack()
-    request_context = context['request']
+    view_id, request_id = body['view']['private_metadata'].split(', ')
+    request_context = rm.get_request_details(context, request_id)
     initial_date = get_initial_date()
-    initial_year = initial_date.year
-    initial_month = initial_date.month
-    initial_day = initial_date.day
+    year, month, day = initial_date.year, initial_date.month, initial_date.day
     text = f"*Creator:* @{users_list[request_context['creator']]}\n"
     text += f"*Bonus_type:* {request_context['bonus_type']}\n"
     text += f"*Status:* approved\n"
     text += f"*Description:* {request_context['description']}\n"
     text += f"*Creation_time:* {request_context['creation_time']}\n"
-    body['view']['blocks'][0]['text']['text'] = text
-    body['view']['blocks'].append(
+
+    blocks = []
+    blocks.append(body['view']['blocks'][0])
+    blocks[0]['text']['text'] = text
+    blocks.append(
         {
       "type": "section",
       "text": {
@@ -445,7 +454,7 @@ def approve_request(ack, body, client, context):
       },
       "accessory": {
         "type": "datepicker",
-        "initial_date": f"{initial_year}-{initial_month}-{initial_day}",
+        "initial_date": f"{year}-{month}-{day}",
         "placeholder": {
           "type": "plain_text",
           "text": "Select a date",
@@ -455,13 +464,12 @@ def approve_request(ack, body, client, context):
     }
     )
 
-    blocks = body['view']['blocks']
-
     client.views_update(
         view_id=body['view']['id'],
         view={
             "type": "modal",
             "callback_id": "make_request_approved",
+            "private_metadata": f"{body['view']['id']}, {request_id}",
             "title": {"type": "plain_text", "text": "Approve request"},
             "submit": {"type": "plain_text", "text": "Submit"},
             "blocks": blocks
@@ -470,9 +478,29 @@ def approve_request(ack, body, client, context):
 
 
 @app.view("make_request_approved")
-def make_request_approved(ack, body, client):
+def make_request_approved(ack, body, context, client):
+    ack(response_action="update", view={
+            "type": "modal",
+            "title": {"type": "plain_text", "text": "Assigned requests"},
+            "blocks": [{
+                "type": "section",
+                "text": {
+                    "type": "plain_text",
+                    "text": ":white_check_mark: Request has been approved!",
+                    "emoji": True
+                }
+            }]
+        })
+
+    view_id, request_id = body['view']['private_metadata'].split(', ')
+    request_context = rm.get_request_details(context, request_id)
     paymant_day = list(body['view']['state']['values'].values())[0]['datepicker-action']['selected_date']
 
+    # update the previous view with
+    # approved request excluded
+    reviewer_requests = rm.get_reviewer_requests(context)
+    requests_blocks = create_assigned_requests_blocks(reviewer_requests)
+    updated_blocks = [block for block in requests_blocks if block['block_id'] != str(request_context['id'])]
     uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
     data = {
         "status": "a",
@@ -489,15 +517,8 @@ def make_request_approved(ack, body, client):
 *Creation time*: {request_context['creation_time']}")
 
 
-    global requests_blocks
-
-    for i, request in enumerate(requests_blocks):
-        if 'block_id' not in request:
-            del requests_blocks[i]
-            break
-
-    if not len(requests_blocks):
-        requests_blocks = [{
+    if not updated_blocks:
+        updated_blocks = [{
             "type": "header",
             "text": {
                 "type": "plain_text",
@@ -505,31 +526,22 @@ def make_request_approved(ack, body, client):
                 "emoji": True
             }
         }]
-    else:
-        for i, request in enumerate(requests_blocks):
-            if int(request['block_id']) == request_context['id']:
-                requests_blocks[i] = {
-                    "type": "section",
-                    "text": {
-                        "type": "plain_text",
-                        "text": ":white_check_mark: Request has been approved!",
-                        "emoji": True
-                    }
-                }
-                break
 
-    ack(response_action="update", view={
+    client.views_update(
+        view_id=body['view']['previous_view_id'],
+        view={
             "type": "modal",
             "title": {"type": "plain_text", "text": "Assigned requests"},
-            "blocks": requests_blocks
+            "blocks": updated_blocks
         }
-    ) 
+    )
 
 
 @app.action("datepicker-action")
 def handle_some_action(ack, body, client, context):
     ack()
-    initial_date = list(body['view']['state']['values'].values())[0]['datepicker-action']['selected_date'].split("-")
+    initial_date = list(body['view']['state']['values'].
+                            values())[0]['datepicker-action']['selected_date'].split("-")
     diff = datetime(
         int(initial_date[0]),
         int(initial_date[1]),

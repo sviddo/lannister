@@ -33,20 +33,6 @@ def get_user_roles(user_id):
 
     return user['roles']
 
-
-users_list = {}
-
-def get_user_list(assigned_requests, app):
-    global users_list
-    for request in assigned_requests:
-        creator = request['creator']
-        reviewer = request['reviewer']
-        users_list[creator] = app.client.users_info(user=creator)['user']['real_name']
-        users_list[reviewer] = app.client.users_info(user=reviewer)['user']['real_name']
-
-    return users_list
-
-
 def get_assigned_requests(reviewer_id):
     assigned_requests = requests.get(f'http://127.0.0.1:8000/api/reviewer_requests/{reviewer_id}')
     if assigned_requests.status_code != 200:
@@ -59,21 +45,12 @@ def get_assigned_requests(reviewer_id):
 
     return non_reviewed_requests
 
-
-
-requests_blocks = [{
-    "type": "header",
-    "text": {
-        "type": "plain_text",
-        "text": "We are loading your requests! Please, try again in a few seconds ...",
-    }
-}]
-
-
 def create_assigned_requests_blocks(assigned_requests):
     """Returns dictionary object wich will be
     passed to 'see_requests' modal to build it.
     Presents all user's reqest with possibility to edit."""
+    requests_blocks = []
+
     if not assigned_requests:
         return [{
             "type": "header",
@@ -83,12 +60,6 @@ def create_assigned_requests_blocks(assigned_requests):
                 "emoji": True
             }
         }]
-
-    global user_list
-    users_list = get_user_list(assigned_requests, app)
-    global requests_blocks
-    if requests_blocks:
-        requests_blocks = []
 
     for request in assigned_requests:
         creator = request['creator']
@@ -103,7 +74,7 @@ def create_assigned_requests_blocks(assigned_requests):
             "block_id": f"{request['id']}",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*Creator:* @{users_list[creator]}\n*Bonus type:* {bonus_type}\n*Status:* {status_extended}"
+                "text": f"*Creator:* @{creator}\n*Bonus type:* {bonus_type}\n*Status:* {status_extended}"
             },
             "accessory": {
                 "type": "button",
