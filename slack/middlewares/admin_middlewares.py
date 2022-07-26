@@ -1,19 +1,17 @@
 import requests, json
 from datetime import datetime as dt
 
-def get_all_users_but_self(context, next):
+def get_all_users_but_self(context):
     user_id = context["user_id"]
     users_but_me=[]
     users_data = requests.get('http://127.0.0.1:8000/api/users')
     users = json.loads(users_data.text)
     users_but_me = filter(lambda user: user["service_id"] != user_id, users)
 
-    context["users"] = list(users_but_me)
+    return list(users_but_me)
     
-    next()
 
-def create_blocks(context, next):
-    users = context["users"]
+def create_user_role_blocks(users):
     blocks = []
     for user in users:
         user_role = ""
@@ -65,8 +63,9 @@ def create_blocks(context, next):
                 }
             }
         )
-    context["blocks"] = blocks
-    next()
+        
+    return blocks
+
 
 def get_requests(context, next):
     requests_data = requests.get('http://127.0.0.1:8000/api/requests')

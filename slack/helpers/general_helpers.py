@@ -17,3 +17,19 @@ def header():
     }
 
     return view
+
+def loader(title):
+    view = {
+            "type": "modal",
+            "title": {"type": "plain_text", "text": title},
+            "blocks": [{
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Plese, stay calm. We're loading the data.",
+                    "emoji": True
+                }
+            }]
+        }
+
+    return view

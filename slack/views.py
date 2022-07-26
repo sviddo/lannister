@@ -1,4 +1,3 @@
-from queue import PriorityQueue
 from django.views.decorators.csrf import csrf_exempt
 from slack import app
 from slack_bolt.adapter.django import SlackRequestHandler
@@ -73,15 +72,22 @@ def change_role_submission(ack, body, client):
     ack()
     client.chat_postMessage(channel=body['user']['id'], text="Just wanted to inform you that all the changes has been made and user roles have been updated successfully")
 
-@app.action("change_role_modal", middleware=[am.get_all_users_but_self, am.create_user_role_blocks])
+@app.action("change_role_modal")
 def handle_some_action(ack, context, client, body):
     ack()
 
     # TODO: if no users print that there's no users to show
 
-    blocks = context["blocks"]
-    client.views_open(
+    old_view = client.views_open(
         trigger_id=body['trigger_id'],
+        view=gh.loader("Users")
+    )
+
+    users = am.get_all_users_but_self(context)
+    blocks = am.create_user_role_blocks(users)
+
+    client.views_update(
+        view_id=old_view["view"]["id"],
         view={
             "type": "modal",
             "callback_id": "admin_view",
