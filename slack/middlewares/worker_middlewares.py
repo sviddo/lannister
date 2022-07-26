@@ -42,6 +42,8 @@ def create_make_request_view(context, next):
             "element": {
                 "type": "plain_text_input",
                 "action_id": "bonus",
+                "min_length": 5,
+                "max_length": 80,
                 "placeholder": {
                     "type": "plain_text",
                     "text": "What type of bonus is it? (up to 80 characters)",
@@ -76,7 +78,7 @@ def create_make_request_view(context, next):
                 "type": "static_select",
                 "placeholder": {
                     "type": "plain_text",
-                    "text": "Select an item",
+                    "text": "Select a reviewer",
                 },
                 "options": options,
                 "action_id": "bonus"
