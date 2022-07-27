@@ -41,7 +41,11 @@ class Request(models.Model):
 
     # ask the user to describe the bonus type in a few words
     # i.e. - referral bonus, overtime, etc
-    status = models.CharField(max_length=1, choices=Status.choices)
+    status = models.CharField(
+        max_length=1, 
+        choices=Status.choices, 
+        default='c'
+    )
     creation_time = models.DateTimeField(auto_now_add=True)
     paymant_day = models.DateField(null=True)
     bonus_type = models.CharField(max_length=80)
@@ -58,5 +62,9 @@ class RequestHistory(models.Model):
 
     request = models.ForeignKey(Request, on_delete=models.CASCADE)
     modified = models.DateTimeField(auto_now_add=True)
-    type_of_change = models.CharField(max_length=1, choices=TypeOfChange.choices)
+    type_of_change = models.CharField(
+        max_length=1, 
+        choices=TypeOfChange.choices, 
+        default='c'
+    )
     

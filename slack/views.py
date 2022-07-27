@@ -1,9 +1,26 @@
 from django.views.decorators.csrf import csrf_exempt
 from slack_bolt import App
 from slack_bolt.adapter.django import SlackRequestHandler
-from .middlewares import admin_middlewares as am, worker_middlewares as wm
-from .helpers import admin_helpers as ah, general_helpers as gh, worker_helpers as wh
-from .services import get_user_roles
+from datetime import datetime
+
+from .middlewares import (
+    admin_middlewares as am, 
+    worker_middlewares as wm, 
+    reviewer_middlewares as rm,
+)
+from .helpers import (
+    admin_helpers as ah, 
+    general_helpers as gh, 
+    worker_helpers as wh, 
+    reviewer_helpers as rh,
+)
+from .services import (
+    get_user_roles, 
+    get_assigned_requests, 
+    create_assigned_requests_blocks, 
+    get_initial_date, 
+    users_list,
+)
 import os, requests, json
 
 app = App(
@@ -20,7 +37,7 @@ def events(request):
 
 @app.event('app_home_opened')
 def update_home_tab(client, event, logger):
-    user_id=event["user"] 
+    user_id=event["user"]
     view = gh.header()
     blocks = []
 
@@ -29,6 +46,12 @@ def update_home_tab(client, event, logger):
     if 'r' in get_user_roles(user_id):
         blocks = wh.reviewer_home_blocks()
         view['blocks'].extend(blocks)
+        reviewer_blocks = rh.reviewer_home_blocks()
+        view['blocks'].extend(reviewer_blocks)
+        assigned_requests = get_assigned_requests(user_id)
+        global requests_blocks
+        from .services import requests_blocks
+        requests_blocks = create_assigned_requests_blocks(assigned_requests)
 
     if 'a' in get_user_roles(user_id):
         blocks = ah.admin_home_blocks()
@@ -229,3 +252,272 @@ def handle_some_action(ack, body, context, client):
             "blocks": blocks
         }
     )
+
+
+
+@app.action("view_assigned_requests_modal")
+def view_assigned_requests(ack, client, body):
+    ack()
+    global requests_blocks
+
+    if len(requests_blocks) > 1:
+        for i, request in enumerate(requests_blocks):
+            if 'block_id' not in request:
+                del requests_blocks[i]
+                break
+    elif (len(requests_blocks) == 1 
+        and (requests_blocks[0]['text']['text'].endswith("Request has been rejected!")
+        or requests_blocks[0]['text']['text'].endswith("Request has been approved!"))):
+        requests_blocks = [{
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "There are no assigned requests for you :man-shrugging:",
+                "emoji": True
+            }
+        }]
+
+    client.views_open(
+        trigger_id=body['trigger_id'],
+        view={
+            "type": "modal",
+            "title": {"type": "plain_text", "text": "Assigned requests"},
+            "blocks": requests_blocks
+        }
+    )
+
+
+request_context = None
+
+
+@app.action("change_request_status", middleware=[rm.get_request_details, rm.create_change_status_blocks])
+def edit_request(ack, body, client, context):
+    ack()
+    global request_context
+    request_context = context['request']
+    blocks = context['blocks']
+    client.views_update(
+        view_id=body['view']['id'],
+        view={
+            "type": "modal",
+            "title": {"type": "plain_text", "text": "Change request status"},
+            "blocks": blocks
+        }
+    )
+
+
+
+@app.action("reject_request")
+def reject_request(ack, body, client):
+    ack(response_action="update")
+    uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
+    data = {
+        "status": "r"
+    }
+    requests.patch(url=uri, json=data)
+
+    channel_id = app.client.conversations_open(users=request_context['creator'])['channel']['id']
+    app.client.chat_postMessage(channel=channel_id, text=f":pensive: *Unfortunately your request with following data was rejected:*\n\
+*Reviewer*: @{users_list[request_context['reviewer']]}\n\
+*Bonus_type*: {request_context['bonus_type']}\n\
+*Description*: {request_context['description']}\n\
+*Creation time*: {request_context['creation_time']}")
+    
+    global requests_blocks
+
+    for i, request in enumerate(requests_blocks):
+        if 'block_id' not in request:
+            del requests_blocks[i]
+            break
+
+    if not len(requests_blocks):
+        requests_blocks = [{
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "There are no assigned requests for you :man-shrugging:",
+                "emoji": True
+            }
+        }]
+    else:
+        for i, request in enumerate(requests_blocks):
+            if int(request['block_id']) == request_context['id']:
+                requests_blocks[i] = {
+                    "type": "section",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":white_check_mark: Request has been rejected!",
+                        "emoji": True
+                    }
+                }
+                break
+
+    client.views_update(
+        view_id=body['view']['id'],
+        view={
+            "type": "modal",
+            "title": {"type": "plain_text", "text": "Assigned requests"},
+            "blocks": requests_blocks
+        }
+    )
+
+
+
+@app.action("approve_request")
+def approve_request(ack, body, client):
+    ack()
+    body['view']['blocks'].pop(-1)
+    initial_date = get_initial_date()
+    initial_year = initial_date.year
+    initial_month = initial_date.month
+    initial_day = initial_date.day
+    text = f"*Creator:* @{users_list[request_context['creator']]}\n"
+    text += f"*Bonus_type:* {request_context['bonus_type']}\n"
+    text += f"*Status:* approved\n"
+    text += f"*Description:* {request_context['description']}\n"
+    text += f"*Creation_time:* {request_context['creation_time']}\n"
+    body['view']['blocks'][0]['text']['text'] = text
+    body['view']['blocks'].append(
+        {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Paymant_day:*"
+      },
+      "accessory": {
+        "type": "datepicker",
+        "initial_date": f"{initial_year}-{initial_month}-{initial_day}",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Select a date",
+        },
+        "action_id": "datepicker-action"
+      }
+    }
+    )
+
+    blocks = body['view']['blocks']
+
+    client.views_update(
+        view_id=body['view']['id'],
+        view={
+            "type": "modal",
+            "callback_id": "make_request_approved",
+            "title": {"type": "plain_text", "text": "Approve request"},
+            "submit": {"type": "plain_text", "text": "Submit"},
+            "blocks": blocks
+        }
+    )
+
+
+
+@app.view("make_request_approved")
+def make_request_approved(ack, body, client):
+    paymant_day = list(body['view']['state']['values'].values())[0]['datepicker-action']['selected_date']
+
+    uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
+    data = {
+        "status": "a",
+        "paymant_day": f"{paymant_day}"
+
+    }
+    requests.patch(url=uri, json=data)
+
+    channel_id = app.client.conversations_open(users=request_context['creator'])['channel']['id']
+    app.client.chat_postMessage(channel=channel_id, text=f":tada: *Congratulations! Your request with following data was approved:*\n\
+*Reviewer*: @{users_list[request_context['reviewer']]}\n\
+*Bonus_type*: {request_context['bonus_type']}\n\
+*Description*: {request_context['description']}\n\
+*Creation time*: {request_context['creation_time']}")
+
+
+    global requests_blocks
+
+    for i, request in enumerate(requests_blocks):
+        if 'block_id' not in request:
+            del requests_blocks[i]
+            break
+
+    if not len(requests_blocks):
+        requests_blocks = [{
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "There are no assigned requests for you :man-shrugging:",
+                "emoji": True
+            }
+        }]
+    else:
+        for i, request in enumerate(requests_blocks):
+            if int(request['block_id']) == request_context['id']:
+                requests_blocks[i] = {
+                    "type": "section",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":white_check_mark: Request has been approved!",
+                        "emoji": True
+                    }
+                }
+                break
+
+    ack(response_action="update", view={
+            "type": "modal",
+            "title": {"type": "plain_text", "text": "Assigned requests"},
+            "blocks": requests_blocks
+        }
+    ) 
+
+
+
+@app.action("datepicker-action")
+def handle_some_action(ack, body, client, context):
+    ack()
+    initial_date = list(body['view']['state']['values'].values())[0]['datepicker-action']['selected_date'].split("-")
+    diff = datetime(
+        int(initial_date[0]),
+        int(initial_date[1]),
+        int(initial_date[2])
+    ) - datetime.now()
+
+    if diff.total_seconds() < 0:
+        blocks = body['view']['blocks']
+        if len(blocks) == 3:
+            blocks.pop(-1)
+        initial_date = get_initial_date()
+        initial_year = initial_date.year
+        initial_month = initial_date.month
+        initial_day = initial_date.day
+        blocks[-1]['accessory']['initial_date'] = f"{initial_year}-{initial_month}-{initial_day}"
+        blocks.append(
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*'Paymant_day' field must be date from tomorrow!*"
+                }
+            }
+        )
+
+        client.views_update(
+            view_id=body['view']['id'],
+            view={
+                "type": "modal",
+                "title": {"type": "plain_text", "text": "Approve request"},
+                "blocks": blocks
+            }
+        )
+    else:
+        blocks = body['view']['blocks']
+        if len(blocks) == 3:
+            blocks.pop(-1)
+        
+        client.views_update(
+            view_id=body['view']['id'],
+            view={
+                "type": "modal",
+                "callback_id": "make_request_approved",
+                "title": {"type": "plain_text", "text": "Approve request"},
+                "submit": {"type": "plain_text", "text": "Submit"},
+                "blocks": blocks
+            }
+        )

@@ -4,6 +4,7 @@ import django.core.exceptions as exceptions
 from rest_framework.decorators import api_view
 from requests import JSONDecodeError
 from .models import (
+    RequestHistory,
     User, 
     Role,
     UserRole,
@@ -14,30 +15,49 @@ from .serializers import (
     UserSerializer,
     UserRoleSerializer,
     RequestSerializer,
+    RequestHistorySerializer,
 )
 from rest_framework.response import Response
 from rest_framework import status
 from json.decoder import JSONDecodeError
 from .services import CustomException
-from .services import get_request
+from .services import (
+    get_user, 
+    get_request,
+    wait_to_change_request_status,
+)
 
 
 
 @api_view(['GET'])
-def get_users(requests):
+def get_users(request):
     users = User.objects.all()
     if users:
         users_with_roles = []
         for user in users:
-            service_id = user.service_id
-            roles = []
-            for user_role in UserRole.objects.filter(user=service_id):
-                roles.append(user_role.role.name)
-
-            users_with_roles.append({'service_id': service_id, 'roles': roles})
+            users_with_roles.append(get_user(user))
         return Response(users_with_roles, status=status.HTTP_200_OK)
     else:
         return Response(["No users!"], status=status.HTTP_404_NOT_FOUND)
+
+
+
+class SingleUser(APIView):
+    def get(self, request, user_id):
+        print("yes")
+        user = User.objects.filter(service_id=user_id).first()
+        if user:
+            return Response(get_user(user), status=status.HTTP_200_OK)
+        else:
+            return Response(["No such user!"], status=status.HTTP_404_NOT_FOUND)
+
+
+    def delete(self, request, user_id):
+        user_to_delete = User.objects.filter(service_id=user_id).first()
+        if user_to_delete:
+            return Response(user_to_delete.delete(), status=status.HTTP_200_OK)
+        return Response(["No such user!"], status=status.HTTP_400_BAD_REQUEST)
+
 
 
 
@@ -71,15 +91,6 @@ def add_user(request):
         return Response([exception_message], status=status.HTTP_400_BAD_REQUEST)
 
     return Response(data=user_to_add, status=status.HTTP_200_OK)
-
-
-
-@api_view(['DELETE'])
-def delete_user(request, user_id):
-    user_to_delete = User.objects.filter(service_id=user_id).first()
-    if user_to_delete:
-        return Response(user_to_delete.delete(), status=status.HTTP_200_OK)
-    return Response(["No such user!"], status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -140,17 +151,7 @@ def get_requests(request):
     if requests:
         requests_list = []
         for elem in requests:
-            temp_dict = {}
-            temp_dict['id'] = elem.id
-            temp_dict['creator'] = elem.creator.service_id
-            temp_dict['reviewer'] = elem.reviewer.service_id
-            temp_dict['status'] = elem.status
-            temp_dict['bonus_type'] = elem.bonus_type
-            temp_dict['description'] = elem.description
-            temp_dict['creation_time'] = elem.creation_time
-            temp_dict['paymant_day'] = elem.paymant_day
-            requests_list.append(temp_dict)
-
+            requests_list.append(get_request(elem))
         return Response(requests_list, status=status.HTTP_200_OK)
 
     return Response(["No requests created!"], status=status.HTTP_400_BAD_REQUEST)
@@ -191,9 +192,10 @@ class RequestView(APIView):
             raise CustomException("Request does not exist!")
 
 
-    def patch(self, request, request_id):        
+    def patch(self, request, request_id):
         try:
             request_to_update = self.get_object(request_id)
+            wait_to_change_request_status(request_to_update)
             request_data = json.loads(request.body)
 
             serializer = RequestSerializer(request_to_update, data=request_data, partial=True)
@@ -236,3 +238,38 @@ def get_user_requests(request, user_id):
         return Response(user_requests, status=status.HTTP_200_OK)
 
     return Response(["User has no requests!"], status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET"])
+def get_requests_history(request):
+    for notion in RequestHistory.objects.all():
+        wait_to_change_request_status(notion.request)
+
+    list_with_history = []
+    for notion in RequestHistory.objects.all():
+        list_with_history.append({
+            "request": notion.request.id,
+            "modified": notion.modified,
+            "type_of_change": notion.type_of_change,
+        })
+    
+    return Response(list_with_history, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+def get_requests_per_reviewer(request, reviewer_id):
+    reviewer = User.objects.filter(service_id=reviewer_id).first()
+    if not reviewer:
+        return Response(["No such user!"], status=status.HTTP_400_BAD_REQUEST)
+    if not UserRole.objects.filter(user=reviewer, role=Role.objects.get(pk='r')):
+        return Response(['User is not reviewer!'], status=status.HTTP_400_BAD_REQUEST)
+
+    requests = Request.objects.filter(reviewer=reviewer_id)
+    if requests:
+        reviewer_requests = []
+        for elem in requests:
+            reviewer_requests.append(get_request(elem))
+
+        return Response(reviewer_requests, status=status.HTTP_200_OK)
+
+    return Response(["Reviewer has no assigned requests!"], status=status.HTTP_400_BAD_REQUEST)

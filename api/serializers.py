@@ -1,9 +1,11 @@
+from datetime import datetime
 from rest_framework import serializers
 from .models import (
     Role, 
     User, 
     UserRole,
     Request,
+    RequestHistory,
 )
 from rest_framework.validators import UniqueValidator
 from .services import CustomException
@@ -71,11 +73,11 @@ class RequestSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     creator = serializers.CharField(max_length=11, required=True)
     reviewer = serializers.CharField(max_length=11, required=True)
-    status = serializers.CharField(required=True)
-    bonus_type = serializers.CharField(required=True)
+    status = serializers.CharField(required=False)
+    bonus_type = serializers.CharField(required=True, max_length=80)
     description = serializers.CharField(required=True)
     creation_time = serializers.DateTimeField(required=False)
-    paymant_day = serializers.DateTimeField(required=False)
+    paymant_day = serializers.DateField(required=False)
 
 
     def validate_creator(self, value):
@@ -112,56 +114,126 @@ class RequestSerializer(serializers.Serializer):
         return value
 
 
+    def validate_paymant_day(self, value):
+        year = value.year
+        month = value.month
+        day = value.day
+
+        if (datetime(year, month, day) - datetime.now()).total_seconds() < 0:
+            raise CustomException("'paymant_day' field must be date from tomorrow")
+
+        return value
+
+
     def is_creation_time_valid(self, value):
         if value:
             raise CustomException("It's forbidden to change the 'creation_time' field!")
 
+
     def create(self, validated_data):
-        fields_to_check = {
-            'creation_time': self.is_creation_time_valid
-        }
-        for key, value in fields_to_check.items():
-            if key in validated_data:
-                value(validated_data[key])
-
-        probably_unique_fields = {
-            "creator": validated_data['creator'],
-            "reviewer": validated_data['reviewer'],
-            "bonus_type": validated_data['bonus_type'],
-            "status": validated_data['status'],
-        }
-
-        if Request.objects.filter(**probably_unique_fields).first():
-            raise CustomException("Such request already exists!")
+        if 'creation_time' in validated_data:
+            self.is_creation_time_valid(validated_data['creation_time'])
+        if 'status' in validated_data and validated_data['status'] in ('a', 'r', 'p'):
+            error_message = f"It's forbidden to set 'status' field with '{validated_data['status']}' value on request creation!"
+            raise CustomException(error_message)
+        if 'paymant_day' in validated_data:
+            raise CustomException("It's forbidden to provide 'paymant_day' field on request creation!")
 
         data_to_save = validated_data.copy()
         data_to_save['creator'] = User.objects.get(service_id=data_to_save['creator'])
         data_to_save['reviewer'] = User.objects.get(service_id=data_to_save['reviewer'])
 
         request = Request.objects.create(**data_to_save)
-        print(request)
+        data_for_history_serializer = {
+            'request': request.id,
+        }
+
+        request_history_serializer = RequestHistorySerializer(data=data_for_history_serializer)
+        if request_history_serializer.is_valid():
+            request_history_serializer.save()
 
         return get_request(request)
 
 
     def update(self, instance, validated_data):
+        if instance.status == 'a':
+            raise CustomException("This request is approved, so can't be updated!")
+        elif instance.status == 'p':
+            raise CustomException("This request is paid, so closed and can't be updated!")
+        elif instance.status == 'r':
+            raise CustomException("This request is rejected, so can't be updated and approved later!")
+        elif instance.status == 'c' and 'status' in validated_data and validated_data['status'] == 'c':
+            raise CustomException("This request is already created, so can't be recreated!")
+
         forbidden_fields = ['creator', 'creation_time']
         for field in forbidden_fields:
             if field in validated_data:
-                error_message = f"'{field}' field can\'t be changed!"
+                error_message = f"'{field}' field can't be changed!"
                 raise CustomException(error_message)
+
+        if 'status' in validated_data and validated_data['status'] == 'a' and 'paymant_day' not in validated_data:
+            raise CustomException("You must provide 'paymant_day' field to change status to 'approved'!")
+        elif 'paymant_day' in validated_data and 'status' not in validated_data:
+            raise CustomException("You must provide 'status' field with 'paymant_day' one!")
+        elif 'paymant_day' in validated_data and 'status' in validated_data and validated_data['status'] != 'a':
+            raise CustomException("It's forbiddent to provide 'paymant_day' field with such type of request update!")
+
         try:
             reviewer = User.objects.filter(pk=validated_data['reviewer']).first()
         except KeyError:
             reviewer = instance.reviewer
 
+        for field in ['reviewer', 'status', 'bonus_type', 'description']:
+            field_object = Request._meta.get_field(field)
+            if field_object.value_from_object(instance) != validated_data.get(field, field_object.value_from_object(instance)):
+                break
+        else:
+            raise CustomException("You updated data must containt some updates!")
+
         instance.reviewer = reviewer
-        instance.status = validated_data.get('status', instance.status)
+        instance.status = validated_data.get('status', 'e')
         instance.bonus_type = validated_data.get('bonus_type', instance.bonus_type)
         instance.description = validated_data.get('description', instance.description)
         instance.paymant_day = validated_data.get('paymant_day', instance.paymant_day)
-
         instance.save()
 
-        return get_request(instance)
+        data_for_history_serializer = {
+            "request": instance.id,
+            "type_of_change": instance.status,
+        }
         
+        request_history_serializer = RequestHistorySerializer(data=data_for_history_serializer)
+        if request_history_serializer.is_valid():
+            request_history_serializer.save()
+
+        return get_request(instance)
+
+
+
+class RequestHistorySerializer(serializers.Serializer):
+    request = serializers.IntegerField(required=True)
+    modified = serializers.DateTimeField(required=False)
+    type_of_change = serializers.CharField(required=False)
+
+
+    def validate_type_of_change(self, value):
+        choices = RequestHistory.TypeOfChange.values
+
+        choices_to_print = []
+        for choice in choices:
+            choices_to_print.append(choice)
+
+        choices_to_print = ["'" + elem + "'" for elem in choices_to_print]
+
+        if value not in choices:
+            message = f"'type_of_change' field must be in [{', '.join(choices_to_print)}]"
+            raise CustomException(message)
+
+        return value
+
+
+    def create(self, validated_data):
+        request = Request.objects.get(id=validated_data['request'])    
+        validated_data['request'] = request
+        return RequestHistory.objects.create(**validated_data)
+                    
