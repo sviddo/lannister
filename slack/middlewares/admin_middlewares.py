@@ -120,9 +120,6 @@ def create_request_blocks(requests):
                 ]
             )
 
-        # get rid off the last divider block
-        del(blocks[-1])
-
     else:
         blocks = [{
 			"type": "header",

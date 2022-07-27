@@ -1,3 +1,5 @@
+import json
+
 def header():
     view = {    
         "type": "home",
@@ -33,3 +35,9 @@ def loader(title):
         }
 
     return view
+
+def parse_dict(dict):
+    return json.dumps(dict)
+
+def parse_string(string):
+    return json.loads(string)

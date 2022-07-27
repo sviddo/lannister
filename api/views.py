@@ -44,7 +44,6 @@ def get_users(request):
 
 class SingleUser(APIView):
     def get(self, request, user_id):
-        print("yes")
         user = User.objects.filter(service_id=user_id).first()
         if user:
             return Response(get_user(user), status=status.HTTP_200_OK)

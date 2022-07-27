@@ -2,9 +2,11 @@ from django.views.decorators.csrf import csrf_exempt
 from slack import app
 from slack_bolt.adapter.django import SlackRequestHandler
 from datetime import datetime
+from .cache import Cache
 
 # constant variable to store url of API service
 URL = "http://127.0.0.1:8000"
+cache = Cache()
 
 from .middlewares import (
     admin_middlewares as am, 
@@ -95,7 +97,6 @@ def handle_some_action(ack, context, client, body):
         }
     )
 
-
 @app.action("show_requests_modal")
 def show_all_requests(ack, client, body):
     ack()
@@ -105,20 +106,118 @@ def show_all_requests(ack, client, body):
     )
 
     requests = am.get_requests()
-    blocks = am.create_request_blocks(requests)[:100]
-    # TODO: show requests within 100 blocks
-    # and if there're more then update the view
-    # with next/previous buttons
+    blocks = am.create_request_blocks(requests)
+    blocks_amount = len(blocks)
 
-    client.views_update(
-        view_id=old_view["view"]["id"],
-        view={
-            "type": "modal",
-            "callback_id": "new_request_submission",
-            "title": {"type": "plain_text", "text": "Requests"},
-            "blocks": blocks
-        }
-    )
+    if blocks_amount <= 100:
+        client.views_update(
+            view_id=old_view["view"]["id"],
+            view={
+                "type": "modal",
+                "callback_id": "new_request_submission",
+                "title": {"type": "plain_text", "text": "Requests"},
+                "blocks": blocks
+            }
+        )
+    else:
+        # here magic number 99 actually means 33 requests
+        # because in our case each request consists of 3 blocks
+        # and that's the max number of req. we can show in a view
+        block_sets = blocks_amount // 99 + 1
+
+        blocks_dict = {}
+        for i in range(block_sets):
+            blocks_dict[i] = blocks[i*99:i*99+99]
+        
+        cache.add('blocks_dict', blocks_dict)
+        cache.add('blocks_dict_key', 0)
+
+        blocks_dict[0].append(ah.appen_button_next())
+        client.views_update(
+            view_id=old_view["view"]["id"],
+            view={
+                "type": "modal",
+                "callback_id": "new_request_submission",
+                "title": {"type": "plain_text", "text": "Requests"},
+                "blocks": blocks_dict[0]
+            }
+        )
+        del(blocks_dict[0][-1])
+
+@app.action("show_next_requests")
+def show_next(ack, body, client):
+    ack()
+    
+    blocks_dict_key = cache.get_mutable('blocks_dict_key')
+    blocks_dict = cache.get('blocks_dict')
+
+    blocks_dict_key +=1
+    cache.update('blocks_dict_key', blocks_dict_key)
+
+    # check if it is the last page
+    # then show only "previous" button
+
+    if blocks_dict_key == list(blocks_dict)[-1]:
+        blocks_dict[blocks_dict_key].append(ah.appen_button_previous())
+
+        client.views_update(
+            view_id=body['view']['id'],
+            view={
+                    "type": "modal",
+                    "callback_id": "new_request_submission",
+                    "title": {"type": "plain_text", "text": "Requests"},
+                    "blocks": blocks_dict[blocks_dict_key]
+                }
+        )
+    else:
+        blocks_dict[blocks_dict_key].append(ah.appen_buttons())
+        client.views_update(
+            view_id=body['view']['id'],
+            view={
+                    "type": "modal",
+                    "callback_id": "new_request_submission",
+                    "title": {"type": "plain_text", "text": "Requests"},
+                    "blocks": blocks_dict[blocks_dict_key]
+                }
+        )
+        
+
+@app.action("show_previous_requests")
+def show_next(ack, body, client):
+    ack()
+
+    blocks_dict_key = cache.get_mutable('blocks_dict_key')
+    blocks_dict = cache.get('blocks_dict')
+
+    blocks_dict_key -=1
+    cache.update('blocks_dict_key', blocks_dict_key)
+
+    # check if it is the first page
+    # then show only "next" button
+    if blocks_dict_key == list(blocks_dict)[0]:
+        blocks_dict[blocks_dict_key].append(ah.appen_button_next())
+       
+        client.views_update(
+            view_id=body['view']['id'],
+            view={
+                    "type": "modal",
+                    "callback_id": "new_request_submission",
+                    "title": {"type": "plain_text", "text": "Requests"},
+                    "blocks": blocks_dict[blocks_dict_key]
+                }
+        )
+    else:
+        blocks_dict[blocks_dict_key].append(ah.appen_buttons())
+        client.views_update(
+            view_id=body['view']['id'],
+            view={
+                    "type": "modal",
+                    "callback_id": "new_request_submission",
+                    "title": {"type": "plain_text", "text": "Requests"},
+                    "blocks": blocks_dict[blocks_dict_key]
+                }
+        )
+
 
 @app.action("request_history_modal")
 def create_requst_history_modal(ack, client, body):
