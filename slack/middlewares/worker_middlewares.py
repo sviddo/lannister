@@ -168,7 +168,6 @@ def get_request_details(context, request_id):
     return req_details
     
 
-
 def create_edit_request_blocks(context, request):
     reviewer = request['reviewer']
     options = create_reviewer_block(get_reviewers(context))

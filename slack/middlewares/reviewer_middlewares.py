@@ -14,10 +14,7 @@ def get_request_details(context, request_id):
     creation_time = datetime.strptime(request_details['creation_time'], '%Y-%m-%dT%H:%M:%S.%fZ')
     request_details['creation_time'] = f"{creation_time.year}-{creation_time.month}-{creation_time.day}  {creation_time.hour}:{creation_time.minute}:{creation_time.second}"
     request_details['status_extended'] = extended_statuses[request_details['status']]
-    print(request_details)
     return request_details
-
-
 
 
 def create_change_status_blocks(request):
@@ -64,6 +61,7 @@ def create_change_status_blocks(request):
     ]
 
     return blocks
+
 
 def get_reviewer_requests(context):
     reviewer_id = context['user_id']
