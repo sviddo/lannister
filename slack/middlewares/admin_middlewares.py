@@ -63,21 +63,21 @@ def create_user_role_blocks(users):
                 }
             }
         )
-        
+
     return blocks
 
 
-def get_requests(context, next):
+def get_requests():
     requests_data = requests.get('http://127.0.0.1:8000/api/requests')
     
     if requests_data.status_code == 400:
-        context['requests'] = None
+        return  None
     else:
-        context['requests']  = json.loads(requests_data.text)
-    next()
+        return json.loads(requests_data.text)
+ 
 
-def create_request_blocks(context, next):
-    requests = context['requests']
+def create_request_blocks(requests):
+
     blocks = []
 
     if requests:
@@ -96,6 +96,7 @@ def create_request_blocks(context, next):
                         },
                         "accessory": {
                             "type": "button",
+                            "style": "primary",
                             "text": {
                                 "type": "plain_text",
                                 "text": "Request History"
@@ -131,12 +132,11 @@ def create_request_blocks(context, next):
 			}
 		}]
 
-    context['blocks'] = blocks
-    next()
+    return blocks
 
 
-def create_request_history_blocks(next, context):
-    request_history = context['request_history']
+def create_request_history_blocks(request_id):
+    request_history = get_request_history(request_id)
     blocks = []
 
     for request in request_history:
@@ -178,20 +178,17 @@ def create_request_history_blocks(next, context):
             ]     
         )
 
-    # get rid off the last diider block
+    # get rid off the last divider block
     del(blocks[-1])
 
-    context['blocks'] = blocks
-    next()
+    return blocks
 
-def get_request_history(next, context, body):
+
+def get_request_history(request_id):
     # function returns request history 
     # for selected request
-    request_id = body['actions'][0]['block_id']
 
     requests_history_data = requests.get('http://127.0.0.1:8000/api/requests_history')
     requests_history = json.loads(requests_history_data.text)
     request_history = [request for request in requests_history if request['request'] == int(request_id)]
-    context['request_history'] = request_history
-
-    next()
+    return request_history

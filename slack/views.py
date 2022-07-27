@@ -3,6 +3,9 @@ from slack import app
 from slack_bolt.adapter.django import SlackRequestHandler
 from datetime import datetime
 
+# constant variable to store url of API service
+URL = "http://127.0.0.1:8000"
+
 from .middlewares import (
     admin_middlewares as am, 
     worker_middlewares as wm, 
@@ -67,26 +70,22 @@ def update_home_tab(client, event, logger):
 
 
 @app.view("admin_view")
-def change_role_submission(ack, body, client):
+def change_role_submission(ack, say, body):
     ack()
-    client.chat_postMessage(channel=body['user']['id'], text="Just wanted to inform you that all the changes has been made and user roles have been updated successfully")
+    say(channel=body['user']['id'], 
+        text="Just wanted to inform you that all the changes "
+             "has been made and user roles have been updated successfully")
 
 @app.action("change_role_modal")
 def handle_some_action(ack, context, client, body):
     ack()
 
     # TODO: if no users print that there's no users to show
-
-    old_view = client.views_open(
-        trigger_id=body['trigger_id'],
-        view=gh.loader("Users")
-    )
-
     users = am.get_all_users_but_self(context)
     blocks = am.create_user_role_blocks(users)
 
-    client.views_update(
-        view_id=old_view["view"]["id"],
+    client.views_open(
+        trigger_id=body['trigger_id'],
         view={
             "type": "modal",
             "callback_id": "admin_view",
@@ -96,15 +95,23 @@ def handle_some_action(ack, context, client, body):
         }
     )
 
-@app.action("show_requests_modal", middleware=[am.get_requests, am.create_request_blocks])
-def show_all_requests(ack, client, body, context):
+
+@app.action("show_requests_modal")
+def show_all_requests(ack, client, body):
     ack()
-
-    blocks = context['blocks']
-
-
-    client.views_open(
+    old_view = client.views_open(
         trigger_id=body['trigger_id'],
+        view=gh.loader("Requests")
+    )
+
+    requests = am.get_requests()
+    blocks = am.create_request_blocks(requests)[:100]
+    # TODO: show requests within 100 blocks
+    # and if there're more then update the view
+    # with next/previous buttons
+
+    client.views_update(
+        view_id=old_view["view"]["id"],
         view={
             "type": "modal",
             "callback_id": "new_request_submission",
@@ -113,12 +120,12 @@ def show_all_requests(ack, client, body, context):
         }
     )
 
-@app.action("request_history_modal", middleware=[ am.get_requests, am.get_request_history, am.create_request_history_blocks])
-def create_requst_history_modal(ack, client, body, context):
+@app.action("request_history_modal")
+def create_requst_history_modal(ack, client, body):
     ack()
 
     request_id = body['actions'][0]['block_id']
-    blocks = context['blocks']
+    blocks = am.create_request_history_blocks(request_id)
     client.views_push(
         trigger_id=body['trigger_id'],
         view={
@@ -131,19 +138,34 @@ def create_requst_history_modal(ack, client, body, context):
     )
 
 @app.action("user_role_has_been_changed")
-def aknowladge(ack, body, context):
+def aknowladge(ack, body):
     ack()  
     user_id = body['actions'][0]['block_id']
     user_role = body['actions'][0]['selected_option']['value']
-    users_data = requests.get('http://127.0.0.1:8000/api/users')
-    users = json.loads(users_data.text)
-    user_in_db = list(filter(lambda user: user["service_id"] == user_id, users))[0]
+    user_in_db = requests.get(f'{URL}/api/user/{user_id}').json()
 
-    uri = f"http://127.0.0.1:8000/api/reviewer_role/{user_id}"
+    uri = f'{URL}/api/reviewer_role/{user_id}'
     if user_role == "r" and user_role not in user_in_db["roles"]:
         requests.patch(uri)
     elif user_role == "cw" and "r" in user_in_db["roles"]:
         requests.delete(uri)
+
+
+@app.action("create_request_modal")
+def create_request(ack, client, body, context):
+    ack()
+    blocks = wm.create_make_request_view(context)
+    
+    client.views_open(
+        trigger_id=body['trigger_id'],
+        view={
+            "type": "modal",
+            "callback_id": "new_request_submission",
+            "title": {"type": "plain_text", "text": "Create Request"},
+            "submit": {"type": "plain_text", "text": "Submit"},
+            "blocks": blocks
+        }
+    )
 
 
 @app.view("new_request_submission")
@@ -169,7 +191,7 @@ def create_new_request(ack, body, say):
     }
 
     # put request to db
-    uri = "http://127.0.0.1:8000/api/create_request"
+    uri = f'{URL}/api/create_request'
     r = requests.post(uri, json=request)
 
     # validate the response
@@ -181,36 +203,23 @@ def create_new_request(ack, body, say):
             "Take a look in the app home!"
         )
 
-@app.action("create_request_modal", middleware=[wm.get_reviewers, wm.create_reviewer_block, wm.create_make_request_view])
-def create_request(ack, client, body, context):
+
+@app.action("see_requests_modal")
+def show_requests(ack, client, body, context):
+    """Show a new modal window with a list
+       of all the user's requests.
+
+       User can edit selected request
+    """
     ack()
-    blocks = context['blocks']
-    
-    client.views_open(
+    old_view = client.views_open(
         trigger_id=body['trigger_id'],
-        view={
-            "type": "modal",
-            "callback_id": "new_request_submission",
-            "title": {"type": "plain_text", "text": "Create Request"},
-            "submit": {"type": "plain_text", "text": "Submit"},
-            "blocks": blocks
-        }
+        view=gh.loader("Requests")
     )
 
-@app.action("see_requests_modal", middleware=[wm.get_requests, wm.create_see_requests_blocks])
-def show_requests(ack, client, body, context):
-    """Show a new modal windows with a list
-    
-    Function creates a new modal with a list
-    of all the user's requests.
-
-    User can edit selected request
-    """
-
-    ack()
-    blocks = context['blocks']
-    client.views_open(
-        trigger_id=body['trigger_id'],
+    blocks = wm.create_see_requests_blocks(context)
+    client.views_update(
+        view_id=old_view['view']['id'],
         view={
             "type": "modal",
             "callback_id": "see_requests_modal_submission",
@@ -220,13 +229,15 @@ def show_requests(ack, client, body, context):
         }
     )
 
-@app.action("edit_request", middleware=[wm.get_reviewers, wm.create_reviewer_block, wm.get_request_details, wm.create_edit_request_blocks])
+@app.action("edit_request")
 def edit_request(ack, body, client, context):
     """Edit/Delete user's own request"""
     ack()
-    blocks = context['blocks']
-    request_id = context['request']['id']
-    request_reviewer = context['request']['reviewer']
+    request_id = body['actions'][0]['block_id']
+    request = wm.get_request_details(context, request_id)
+    blocks = wm.create_edit_request_blocks(context, request)
+    
+    request_reviewer = request['reviewer']
 
     client.views_push(
         trigger_id=body['trigger_id'],
@@ -242,7 +253,7 @@ def edit_request(ack, body, client, context):
 
 
 
-@app.view("edit_request_submission", middleware=[wm.get_requests, wm.create_see_requests_blocks])
+@app.view("edit_request_submission")
 def update_request(ack, body, client, context, say):
     ack()
 
@@ -263,7 +274,7 @@ def update_request(ack, body, client, context, say):
     }
 
     # put request to db
-    uri = f"http://127.0.0.1:8000/api/request/{request_id}"
+    uri = f'{URL}/api/request/{request_id}'
     r = requests.patch(uri, json=request)
 
     # TODO: validate the response
@@ -279,7 +290,7 @@ def update_request(ack, body, client, context, say):
         )
 
 
-    blocks = context['blocks']
+    blocks = wm.create_see_requests_blocks(context)
     for block in blocks:
         if block['block_id'] == f'{request_id}_name':
             block['text']['text'] = request["bonus_type"]
@@ -296,14 +307,15 @@ def update_request(ack, body, client, context, say):
     )
 
 
-@app.action("delete_request", middleware=[wm.get_requests, wm.get_request_details, wm.create_see_requests_blocks])
+@app.action("delete_request")
 def handle_some_action(ack, body, context, client):
     ack()
 
-    request_id = context['request']['id']
-    blocks = [block for block in context['blocks'] if not (block['block_id'] == str(request_id) or block['block_id'] == f'{request_id}_name')]
+    request_id = body['actions'][0]['block_id']
+    old_blocks = wm.create_see_requests_blocks(context)
+    blocks = [block for block in old_blocks if not (block['block_id'] == str(request_id) or block['block_id'] == f'{request_id}_name')]
     
-    uri = f"http://127.0.0.1:8000/api/request/{request_id}"
+    uri = f'{URL}/api/request/{request_id}'
     requests.delete(uri)
 
     # updating the view with deleted blocks being removed
@@ -321,6 +333,10 @@ def handle_some_action(ack, body, context, client):
 @app.action("view_assigned_requests_modal")
 def view_assigned_requests(ack, client, body, context):
     ack()
+    old_view = client.views_open(
+        trigger_id=body['trigger_id'],
+        view=gh.loader("Assigned Requests")
+    )
     requests = rm.get_reviewer_requests(context)
     blocks = []
 
@@ -336,8 +352,8 @@ def view_assigned_requests(ack, client, body, context):
     else:
         blocks = create_assigned_requests_blocks(requests)
 
-    client.views_open(
-        trigger_id=body['trigger_id'],
+    client.views_update(
+        view_id=old_view['view']['id'],
         view={
             "type": "modal",
             "title": {"type": "plain_text", "text": "Assigned requests"},
@@ -348,7 +364,6 @@ def view_assigned_requests(ack, client, body, context):
 @app.action("change_request_status")
 def edit_request(ack, body, client, context):
     ack()
-
     request_id = body['view']['blocks'][0]['block_id']
     request = rm.get_request_details(context, request_id)
 
@@ -375,7 +390,7 @@ def reject_request(ack, body, client, context):
     updated_blocks = [block for block in requests_blocks if block['block_id'] != str(request_context['id'])]
 
     
-    uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
+    uri = f'{URL}/api/request/{request_context["id"]}'
     data = {
         "status": "r"
     }
@@ -436,7 +451,7 @@ def approve_request(ack, body, client, context):
     request_context = rm.get_request_details(context, request_id)
     initial_date = get_initial_date()
     year, month, day = initial_date.year, initial_date.month, initial_date.day
-    text = f"*Creator:* @{users_list[request_context['creator']]}\n"
+    text = f"*Creator:* <@{request_context['creator']}>\n"
     text += f"*Bonus_type:* {request_context['bonus_type']}\n"
     text += f"*Status:* approved\n"
     text += f"*Description:* {request_context['description']}\n"
@@ -501,7 +516,7 @@ def make_request_approved(ack, body, context, client):
     reviewer_requests = rm.get_reviewer_requests(context)
     requests_blocks = create_assigned_requests_blocks(reviewer_requests)
     updated_blocks = [block for block in requests_blocks if block['block_id'] != str(request_context['id'])]
-    uri = f"http://127.0.0.1:8000/api/request/{request_context['id']}"
+    uri = f'{URL}/api/request/{request_context["id"]}'
     data = {
         "status": "a",
         "paymant_day": f"{paymant_day}"
@@ -511,7 +526,7 @@ def make_request_approved(ack, body, context, client):
 
     channel_id = app.client.conversations_open(users=request_context['creator'])['channel']['id']
     app.client.chat_postMessage(channel=channel_id, text=f":tada: *Congratulations! Your request with following data was approved:*\n\
-*Reviewer*: @{users_list[request_context['reviewer']]}\n\
+*Reviewer*: <@{request_context['reviewer']}>\n\
 *Bonus_type*: {request_context['bonus_type']}\n\
 *Description*: {request_context['description']}\n\
 *Creation time*: {request_context['creation_time']}")
@@ -538,7 +553,7 @@ def make_request_approved(ack, body, context, client):
 
 
 @app.action("datepicker-action")
-def handle_some_action(ack, body, client, context):
+def handle_some_action(ack, body, client):
     ack()
     initial_date = list(body['view']['state']['values'].
                             values())[0]['datepicker-action']['selected_date'].split("-")
