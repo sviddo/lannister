@@ -253,18 +253,37 @@ def aknowladge(ack, body):
 @app.action("create_request_modal")
 def create_request(ack, client, body, context):
     ack()
-    blocks = wm.create_make_request_view(context)
-    
-    client.views_open(
+    user_requests = wm.get_requests(context)
+    if user_requests and len(user_requests) >= 50:
+        client.views_open(
         trigger_id=body['trigger_id'],
         view={
             "type": "modal",
-            "callback_id": "new_request_submission",
             "title": {"type": "plain_text", "text": "Create Request"},
-            "submit": {"type": "plain_text", "text": "Submit"},
-            "blocks": blocks
+            "blocks": [{
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "You have over 50 unresolved requests, thus"
+                            " you can't create any new at the moment 🥺"
+                }
+            }]
         }
     )
+
+    else:
+        blocks = wm.create_make_request_view(context)
+        
+        client.views_open(
+            trigger_id=body['trigger_id'],
+            view={
+                "type": "modal",
+                "callback_id": "new_request_submission",
+                "title": {"type": "plain_text", "text": "Create Request"},
+                "submit": {"type": "plain_text", "text": "Submit"},
+                "blocks": blocks
+            }
+        )
 
 
 @app.view("new_request_submission")
