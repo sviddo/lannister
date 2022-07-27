@@ -29,7 +29,7 @@ def create_change_status_blocks(request):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*Creator:* @{creator}\n*Bonus type:* {bonus_type}\n*Status:* {status_extended}\n*Bonus_type:* {bonus_type}\n*Description:* {description}\n*Creation_time:* {creation_time}"
+                "text": f"*Creator:* <@{creator}>\n*Bonus type:* {bonus_type}\n*Status:* {status_extended}\n*Bonus_type:* {bonus_type}\n*Description:* {description}\n*Creation_time:* {creation_time}"
             }
         },
         {

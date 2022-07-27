@@ -129,8 +129,8 @@ def show_all_requests(ack, client, body):
         for i in range(block_sets):
             blocks_dict[i] = blocks[i*99:i*99+99]
         
-        cache.add('blocks_dict', blocks_dict)
-        cache.add('blocks_dict_key', 0)
+        cache.add('admin_blocks_dict', blocks_dict)
+        cache.add('admin_blocks_dict_key', 0)
 
         blocks_dict[0].append(ah.appen_button_next())
         client.views_update(
@@ -148,11 +148,11 @@ def show_all_requests(ack, client, body):
 def show_next(ack, body, client):
     ack()
     
-    blocks_dict_key = cache.get_mutable('blocks_dict_key')
-    blocks_dict = cache.get('blocks_dict')
+    blocks_dict_key = cache.get('admin_blocks_dict_key')
+    blocks_dict = cache.get('admin_blocks_dict')
 
     blocks_dict_key +=1
-    cache.update('blocks_dict_key', blocks_dict_key)
+    cache.update('admin_blocks_dict_key', blocks_dict_key)
 
     # check if it is the last page
     # then show only "previous" button
@@ -186,11 +186,11 @@ def show_next(ack, body, client):
 def show_next(ack, body, client):
     ack()
 
-    blocks_dict_key = cache.get_mutable('blocks_dict_key')
-    blocks_dict = cache.get('blocks_dict')
+    blocks_dict_key = cache.get('admin_blocks_dict_key')
+    blocks_dict = cache.get('admin_blocks_dict')
 
     blocks_dict_key -=1
-    cache.update('blocks_dict_key', blocks_dict_key)
+    cache.update('admin_blocks_dict_key', blocks_dict_key)
 
     # check if it is the first page
     # then show only "next" button
@@ -436,29 +436,113 @@ def view_assigned_requests(ack, client, body, context):
         trigger_id=body['trigger_id'],
         view=gh.loader("Assigned Requests")
     )
+
     requests = rm.get_reviewer_requests(context)
-    blocks = []
+    blocks = create_assigned_requests_blocks(requests)
+    blocks_amount = len(blocks)
 
-    if not requests:
-        blocks = [{
-            "type": "header",
-            "text": {
-                "type": "plain_text",
-                "text": "There are no assigned requests for you :man-shrugging:",
-                "emoji": True
+    if blocks_amount <= 100:
+        client.views_update(
+            view_id=old_view['view']['id'],
+            view={
+                "type": "modal",
+                "title": {"type": "plain_text", "text": "Assigned requests"},
+                "blocks": blocks
             }
-        }]
+        )
     else:
-        blocks = create_assigned_requests_blocks(requests)
+        # here magic number 99 actually means 99 requests
+        # plus we need 1 more block for buttons
+        block_sets = blocks_amount // 99 + 1
 
-    client.views_update(
-        view_id=old_view['view']['id'],
-        view={
-            "type": "modal",
-            "title": {"type": "plain_text", "text": "Assigned requests"},
-            "blocks": blocks
-        }
-    )
+        blocks_dict = {}
+        for i in range(block_sets):
+            blocks_dict[i] = blocks[i*99:i*99+99]
+        
+        cache.add('reviewer_blocks_dict', blocks_dict)
+        cache.add('reviewer_blocks_dict_key', 0)
+
+        blocks_dict[0].append(rh.appen_button_next())
+        client.views_update(
+            view_id=old_view["view"]["id"],
+            view={
+                "type": "modal",
+                "title": {"type": "plain_text", "text": "Assigned Requesrs"},
+                "blocks": blocks_dict[0]
+            }
+        )
+        del(blocks_dict[0][-1])
+
+@app.action("next_assigned_requests_modal")
+def next_assigned_requests(ack, client, body):
+    ack()
+    
+    blocks_dict_key = cache.get('reviewer_blocks_dict_key')
+    blocks_dict = cache.get('reviewer_blocks_dict')
+
+    blocks_dict_key +=1
+    cache.update('reviewer_blocks_dict_key', blocks_dict_key)
+
+    # check if it is the last page
+    # then show only "previous" button
+
+    if blocks_dict_key == list(blocks_dict)[-1]:
+        blocks_dict[blocks_dict_key].append(rh.appen_button_previous())
+
+        client.views_update(
+            view_id=body['view']['id'],
+            view={
+                    "type": "modal",
+                    "title": {"type": "plain_text", "text": "Assigned Requests"},
+                    "blocks": blocks_dict[blocks_dict_key]
+                }
+        )
+    else:
+        blocks_dict[blocks_dict_key].append(rh.appen_buttons())
+        client.views_update(
+            view_id=body['view']['id'],
+            view={
+                    "type": "modal",
+                    "title": {"type": "plain_text", "text": "Assigned Requests"},
+                    "blocks": blocks_dict[blocks_dict_key]
+                }
+        )
+        
+
+
+@app.action("previous_assigned_requests_modal")
+def previous_assigned_requests(ack, client, body):
+    ack()
+    
+    blocks_dict_key = cache.get('reviewer_blocks_dict_key')
+    blocks_dict = cache.get('reviewer_blocks_dict')
+
+    blocks_dict_key -=1
+    cache.update('reviewer_blocks_dict_key', blocks_dict_key)
+
+    # check if it is the first page
+    # then show only "next" button
+    if blocks_dict_key == list(blocks_dict)[0]:
+        blocks_dict[blocks_dict_key].append(rh.appen_button_next())
+
+        client.views_update(
+            view_id=body['view']['id'],
+            view={
+                    "type": "modal",
+                    "title": {"type": "plain_text", "text": "Assigned Requests"},
+                    "blocks": blocks_dict[blocks_dict_key]
+                }
+        )
+    else:
+        blocks_dict[blocks_dict_key].append(rh.appen_buttons())
+        client.views_update(
+            view_id=body['view']['id'],
+            view={
+                    "type": "modal",
+                    "title": {"type": "plain_text", "text": "Assigned Requests"},
+                    "blocks": blocks_dict[blocks_dict_key]
+                }
+        )
 
 @app.action("change_request_status")
 def edit_request(ack, body, client, context):

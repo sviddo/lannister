@@ -61,34 +61,36 @@ def create_assigned_requests_blocks(assigned_requests):
             }
         }]
 
-    for request in assigned_requests:
-        creator = request['creator']
-        extended_statuses = {
-            "c": "created",
-            "e": "edited"
-        }
-        status_extended = extended_statuses[request['status']]
-        bonus_type = request['bonus_type']
-        requests_blocks.extend([{
-            "type": "section",
-            "block_id": f"{request['id']}",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"*Creator:* @{creator}\n*Bonus type:* {bonus_type}\n*Status:* {status_extended}"
-            },
-            "accessory": {
-                "type": "button",
-                "text": {
-                    "type": "plain_text",
-                    "text": "Change status"
-                },
-                "style": "primary",
-                "value": "change_status",
-                "action_id": "change_request_status"
-            }
-        }])
+    else:
 
-    return requests_blocks
+        for request in assigned_requests:
+            creator = request['creator']
+            extended_statuses = {
+                "c": "created",
+                "e": "edited"
+            }
+            status_extended = extended_statuses[request['status']]
+            bonus_type = request['bonus_type']
+            requests_blocks.extend([{
+                "type": "section",
+                "block_id": f"{request['id']}",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Creator:* <@{creator}>\n*Bonus type:* {bonus_type}\n*Status:* {status_extended}"
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Change status"
+                    },
+                    "style": "primary",
+                    "value": "change_status",
+                    "action_id": "change_request_status"
+                }
+            }])
+
+        return requests_blocks
 
 
 def get_initial_date():
