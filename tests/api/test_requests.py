@@ -106,7 +106,64 @@ class TestUpdateRequests:
         invalid_request = requests.patch(url + f"/api/request/{created_requests[3]['id']}", json={"description": "random_data"})
         assert invalid_request.status_code == 201
         
+        
 
-# a = TestCreateRequests() 
-# for elem in create_valid_requests():
+class TestGetRequestsPerUser:
+    @pytest.mark.dependency(depends=["TestCreateRequests::test_valid_data"])
+    @pytest.mark.parametrize("test", return_users_to_add())
+    def test_valid_data_user(self, test):
+        # print(test)
+        # assert url + f"/api/requests/{test['service_id']}" == "http"
+        invalid_requests = requests.get(url + f"/api/requests/{test['service_id']}")
+        assert invalid_requests.status_code == 200
+
+        # assert invalid_requests.status_code == 200
+        
+        
+    @pytest.mark.dependency(depends=["TestCreateRequests::test_valid_data"])
+    @pytest.mark.parametrize("test", [user for user in return_users_to_add() if "r" in user["roles"]])
+    def test_valid_data_reviewer(self, test):
+        # print(test)
+        # assert url + f"/api/requests/{test['service_id']}" == "http"
+        invalid_requests = requests.get(url + f"/api/requests/{test['service_id']}")
+        assert invalid_requests.status_code == 200
+        
+    
+    @pytest.mark.parametrize("test", 
+                             ["abc",
+                              "def",
+                              "jhcjhdh"])
+    def test_invalid_data_ids(self, test):
+        invalid_request = requests.get(url + f"/api/requests/{test}")
+
+        assert invalid_request.status_code == 400
+        
+        
+
+# class TestGetRequestsPerUser:
+#     @pytest.mark.dependency(depends=["TestCreateRequests::test_valid_data"])
+#     @pytest.mark.parametrize("test", return_users_to_add())
+#     def test_valid_data(self, test):
+#         # print(test)
+#         # assert url + f"/api/requests/{test['service_id']}" == "http"
+#         invalid_requests = requests.get(url + f"/api/requests/{test['service_id']}")
+#         assert invalid_requests.status_code == 200
+
+#         # assert invalid_requests.status_code == 200
+        
+    
+#     @pytest.mark.parametrize("test", 
+#                              ["abc",
+#                               "def",
+#                               "jhcjhdh"])
+#     def test_invalid_data_ids(self, test):
+#         invalid_request = requests.get(url + f"/api/requests/{test}")
+
+#         assert invalid_request.status_code == 400
+    
+        
+        
+
+# a = TestGetRequestsPerUser() 
+# for elem in return_users_to_add():
 #     a.test_valid_data(elem)
