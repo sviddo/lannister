@@ -341,8 +341,6 @@ def show_requests(ack, client, body, context):
         view={
             "type": "modal",
             "callback_id": "see_requests_modal_submission",
-            "private_metadata": f"{old_view['view']['id']}",
-            #"external_id": "user_requestss",
             "title": {"type": "plain_text", "text": "My requests"},
             "blocks": blocks
         }
@@ -369,7 +367,6 @@ def edit_request(ack, body, client, context):
             "blocks": blocks
         }
     )
-
 
 
 @app.view("edit_request_submission")
@@ -414,10 +411,9 @@ def update_request(ack, body, client, context, say):
             block['text']['text'] = request["bonus_type"]
   
     client.views_update(
-        external_id="user_requestss",
+        view_id=body['view']['previous_view_id'],
         view={
             "type": "modal",
-            "external_id": "user_requestss",
             "callback_id": "see_requests_modal_submission",
             "title": {"type": "plain_text", "text": "My requests"},
             "blocks": blocks
@@ -809,7 +805,7 @@ def handle_some_action(ack, body, client):
         )
 
 @app.event("team_join")
-def add_new_member(body, event, ack):
+def add_new_member(event, ack):
     ack()
     user_id = event['user']['id']
     data = {
@@ -820,7 +816,7 @@ def add_new_member(body, event, ack):
 
 
 @app.event("user_change")
-def remove_member(body, event, ack):
+def remove_member(event, ack):
     ack()
     user_id = event['user']['id']
     if event['user']['deleted'] == True:
