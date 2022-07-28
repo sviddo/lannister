@@ -817,7 +817,6 @@ def add_new_member(body, event, ack):
         "roles": ["cw"] 
     }
     requests.post(f"{URL}/api/add_user", json=data)
-    #print(event)
 
 
 @app.event("user_change")
