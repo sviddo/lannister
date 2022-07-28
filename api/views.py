@@ -75,13 +75,15 @@ def add_user(request):
         if user_serializer.is_valid():
             pass
         else:
-            return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer_error = json.loads(json.dumps(user_serializer.errors))
+            return Response(serializer_error, status=status.HTTP_400_BAD_REQUEST)
 
         if user_role_serializer.is_valid():
             user_serializer.save()
             user_role_serializer.save()
         else:
-            return Response(user_role_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer_error = json.loads(json.dumps(user_role_serializer.errors))
+            return Response(serializer_error, status=status.HTTP_400_BAD_REQUEST)
     except ser.ValidationError as exc:
         exception_message = exc.message
         return Response([exception_message], status=status.HTTP_400_BAD_REQUEST)

@@ -1,7 +1,10 @@
+import json
 import requests
 import pytest
 
-url = "https://app-cthojegtpq-uc.a.run.app"
+from conftest import return_users_to_add
+
+url = "http://127.0.0.1:8000"
 
 def test_get_users():
     entire_url = url + "/api/users"
@@ -9,3 +12,61 @@ def test_get_users():
     
     assert users.status_code == 200 or \
         users.status_code == 404 and users.json() == ["No users!"]
+        
+
+class TestAddSingleUser:
+    specific_url = url + "/api/add_user"
+    
+    @pytest.mark.parametrize("test",
+                             [{
+                                 "service_id": "",
+                                 "roles": ["cw"]
+                             },
+                              {
+                                 "service_id": "sjvjsvjksvksdjkvnjdkvndjjsnvj",
+                                 "roles": ["cw"]
+                             },
+                              {
+                                 "roles": ["cw"]
+                             },
+                              {
+                                 "service_id": "abc"
+                             },
+                              {
+                                 "service_id": "abc",
+                                 "roles": ""
+                             },
+                              {
+                                 "service_id": "abc",
+                                 "roles": []
+                             },
+                              {
+                                 "service_id": "abc",
+                                 "roles": [""]
+                             },
+                              {
+                                 "service_id": "abc",
+                                 "roles": ["b"]
+                             },])
+    def test_invalid_data(self, test):
+        invalid_user = requests.post(url=self.specific_url, json=test)
+        
+        assert invalid_user.status_code == 400
+        
+    
+    @pytest.mark.parametrize("test",
+                             return_users_to_add())
+    def test_valid_data(self, test):
+        user_to_add = requests.post(url=self.specific_url, json=test)
+        
+        assert user_to_add.status_code == 200 or \
+            user_to_add.status_code == 400 and {"service_id": ["This field must be unique."]} == user_to_add.json()
+            
+            
+    @pytest.mark.parametrize("test",
+                             return_users_to_add())
+    def test_same_valid_data(self, test):
+        user_to_add = requests.post(url=self.specific_url, json=test)
+        
+        assert user_to_add.status_code == 400 and {"service_id": ["This field must be unique."]} == user_to_add.json()
+        
