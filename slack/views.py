@@ -589,6 +589,7 @@ def reject_request(ack, body, client, context):
 
     
     uri = f'{URL}/api/request/{request_context["id"]}'
+
     data = {
         "status": "r"
     }
@@ -715,6 +716,7 @@ def make_request_approved(ack, body, context, client):
     requests_blocks = create_assigned_requests_blocks(reviewer_requests)
     updated_blocks = [block for block in requests_blocks if block['block_id'] != str(request_context['id'])]
     uri = f'{URL}/api/request/{request_context["id"]}'
+
     data = {
         "status": "a",
         "paymant_day": f"{paymant_day}"
