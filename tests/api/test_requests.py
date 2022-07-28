@@ -1,5 +1,6 @@
 import pytest
 import requests
+import datetime
 # import os
 # import sys
 # path_windows = "\\".join(os.path.abspath(__file__).split("\\")[:-3])
@@ -29,7 +30,8 @@ def test_get_requests():
     assert all_requests.status_code == 200 or \
         all_requests.status_code == 400 and all_requests.json() == ["No requests created!"]
                 
-        
+created_requests = []
+
 class TestCreateRequests:
     # @pytest.mark.order(after="test_users.py::TestHandleReviewerRole::test_delete_valid_data")
     @pytest.mark.parametrize("test",
@@ -41,13 +43,68 @@ class TestCreateRequests:
         
     
     # @pytest.mark.order(after="test_users.py::TestHandleReviewerRole::test_delete_valid_data")
+    @pytest.mark.dependency(name="TestCreateRequests::test_valid_data")
     @pytest.mark.parametrize("test",
                              create_valid_requests())
     def test_valid_data(self, test):
         valid_request = requests.post(url + "/api/create_request", json=test)
-        # print(valid_request.json())
-        # print(valid_request.status_code)
+
         assert valid_request.status_code == 201
+        
+        created_requests.append(valid_request.json())
+        
+        
+class TestUpdateRequests:
+    @pytest.mark.parametrize("test", ["a", "b", "c"])
+    def test_invalid_data_ids(self, test):
+        invalid_request = requests.patch(url + f"/api/request/{test}", json={"bonus_type": "jbcj"})
+
+        assert invalid_request.status_code == 400
+        
+        
+    @pytest.mark.dependency(depends=["TestCreateRequests::test_valid_data"])
+    def test_invalid_data(self):
+        created_requests_copy = created_requests.copy()
+        
+        invalid_request = requests.patch(url + f"/api/request/{created_requests_copy[0]['id']}", json={"creation_time": "2022-07-28T07:03:22.941528Z"})
+        assert invalid_request.status_code == 400
+        
+        invalid_request = requests.patch(url + f"/api/request/{created_requests_copy[1]['id']}", json={"creator": "abc"})
+        assert invalid_request.status_code == 400
+        
+        tomorrow = str(datetime.date.today() + datetime.timedelta(days=1))
+        invalid_request = requests.patch(url + f"/api/request/{created_requests_copy[1]['id']}", json={"paymant_day": tomorrow})
+        assert invalid_request.status_code == 400
+        
+        invalid_request = requests.patch(url + f"/api/request/{created_requests_copy[1]['id']}", json={"paymant_day": tomorrow, "status": "r"})
+        assert invalid_request.status_code == 400
+        
+        invalid_request = requests.patch(url + f"/api/request/{created_requests_copy[1]['id']}", json={"paymant_day": tomorrow, "status": "p"})
+        assert invalid_request.status_code == 400
+                
+        invalid_request = requests.patch(url + f"/api/request/{created_requests_copy[1]['id']}")
+        assert invalid_request.status_code == 400
+        
+        
+    @pytest.mark.dependency(depends=["TestCreateRequests::test_valid_data"])
+    def test_valid_data(self):
+        invalid_request = requests.patch(url + f"/api/request/{created_requests[0]['id']}", json={"status": "r"})
+        assert invalid_request.status_code == 201
+        
+        invalid_request = requests.patch(url + f"/api/request/{created_requests[1]['id']}", json={"status": "p"})
+        assert invalid_request.status_code == 201
+        
+        tomorrow = str(datetime.date.today() + datetime.timedelta(days=1))
+        
+        invalid_request = requests.patch(url + f"/api/request/{created_requests[2]['id']}", json={"paymant_day": tomorrow,
+                                                                                                  "status": "a"})
+        assert invalid_request.status_code == 201
+        
+        invalid_request = requests.patch(url + f"/api/request/{created_requests[3]['id']}", json={"bonus_type": "random_data"})
+        assert invalid_request.status_code == 201
+        
+        invalid_request = requests.patch(url + f"/api/request/{created_requests[3]['id']}", json={"description": "random_data"})
+        assert invalid_request.status_code == 201
         
 
 # a = TestCreateRequests() 
