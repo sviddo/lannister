@@ -2,9 +2,11 @@ import requests
 import json
 from datetime import datetime
 
+URL = "http://127.0.0.1:8000"
+
 def get_request_details(context, request_id):
     reviewer_id = context['user_id']
-    user_requests = json.loads(requests.get(f'http://127.0.0.1:8000/api/reviewer_requests/{reviewer_id}').text)
+    user_requests = json.loads(requests.get(f'{URL}/api/reviewer_requests/{reviewer_id}').text)
 
     request_details = list(filter(lambda request: request['id'] == int(request_id), user_requests))[0]
     extended_statuses = {
@@ -65,7 +67,7 @@ def create_change_status_blocks(request):
 
 def get_reviewer_requests(context):
     reviewer_id = context['user_id']
-    assigned_requests = requests.get(f'http://127.0.0.1:8000/api/reviewer_requests/{reviewer_id}')
+    assigned_requests = requests.get(f'{URL}/api/reviewer_requests/{reviewer_id}')
     if assigned_requests.status_code != 200:
         return None
     else:

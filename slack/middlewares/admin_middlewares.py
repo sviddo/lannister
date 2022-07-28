@@ -70,7 +70,7 @@ def create_user_role_blocks(users):
 
 
 def get_requests():
-    requests_data = requests.get('http://127.0.0.1:8000/api/requests')
+    requests_data = requests.get(f'{URL}/api/requests')
     
     if requests_data.status_code == 400:
         return  None
@@ -190,7 +190,7 @@ def get_request_history(request_id):
     # function returns request history 
     # for selected request
 
-    requests_history_data = requests.get('http://127.0.0.1:8000/api/requests_history')
+    requests_history_data = requests.get(f'{URL}/api/requests_history')
     requests_history = json.loads(requests_history_data.text)
     request_history = [request for request in requests_history if request['request'] == int(request_id)]
     return request_history
