@@ -54,6 +54,7 @@ class TestAddSingleUser:
         assert invalid_user.status_code == 400
         
     
+    @pytest.mark.dependency(name="TestAddSingleUser::test_valid_data")
     @pytest.mark.parametrize("test",
                              return_users_to_add())
     def test_valid_data(self, test):
@@ -85,6 +86,7 @@ class TestGetSingleUser:
         assert single_user.status_code == 404
         
         
+    @pytest.mark.dependency(depends=["TestAddSingleUser::test_valid_data"])
     @pytest.mark.parametrize("test", 
                              return_users_to_add())
     def test_valid_data(self, test):
@@ -108,6 +110,7 @@ class TestDeleteSingleUser:
         assert single_user.status_code == 400
         
         
+    @pytest.mark.dependency(depends=["TestAddSingleUser::test_valid_data"])
     @pytest.mark.parametrize("test", 
                              return_users_to_add())
     def test_valid_data(self, test):
