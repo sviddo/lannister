@@ -1,10 +1,12 @@
 import requests, json
 from datetime import datetime as dt
 
+URL = "http://127.0.0.1:8000"
+
 def get_all_users_but_self(context):
     user_id = context["user_id"]
     users_but_me=[]
-    users_data = requests.get('http://127.0.0.1:8000/api/users')
+    users_data = requests.get(f'{URL}/api/users')
     users = json.loads(users_data.text)
     users_but_me = filter(lambda user: user["service_id"] != user_id, users)
 

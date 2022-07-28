@@ -1,9 +1,11 @@
 import requests, json
 
+URL = "http://127.0.0.1:8000"
+
 def get_reviewers(context):
     user_id = context["user_id"]
     users_but_me=[]
-    users_data = requests.get('http://127.0.0.1:8000/api/users')
+    users_data = requests.get(f'{URL}/api/users')
     users = json.loads(users_data.text)
     users_but_me = filter(lambda user: user["service_id"] != user_id and "r" in user["roles"], users)
     return list(users_but_me)
@@ -104,7 +106,7 @@ def create_make_request_view(context):
 def get_requests(context):
     """Get the list of all the request belonging to the current user"""
     user_id = context["user_id"]
-    user_requests = requests.get(f'http://127.0.0.1:8000/api/requests/{user_id}')
+    user_requests = requests.get(f'{URL}/api/requests/{user_id}')
     if user_requests.status_code == 400:
         return None
     else: 
@@ -193,7 +195,7 @@ def create_see_requests_blocks(context):
 def get_request_details(context, request_id):
     """Get details about choosen request"""
     user_id = context['user_id']
-    user_requests = json.loads(requests.get(f'http://127.0.0.1:8000/api/requests/{user_id}').text)
+    user_requests = json.loads(requests.get(f'{URL}/api/requests/{user_id}').text)
     req_details = list(filter(lambda request: request['id'] == int(request_id), user_requests))[0]
     return req_details
     

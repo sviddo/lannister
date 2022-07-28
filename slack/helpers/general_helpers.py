@@ -28,7 +28,7 @@ def loader(title):
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": "Plese, stay calm. We're loading the data.",
+                    "text": "Plese, stay with us. We're loading the data.",
                     "emoji": True
                 }
             }]
