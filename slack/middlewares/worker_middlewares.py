@@ -110,7 +110,6 @@ def get_requests(context):
     if user_requests.status_code == 400:
         return None
     else: 
-        print(user_requests)
         user_requests =  user_requests.json()
         valide = [request for request in user_requests if request['status'] in ('c', 'e')]
         return valide
@@ -123,8 +122,6 @@ def create_see_requests_blocks(context):
     reviewers = get_reviewers(context)
     requests = get_requests(context)
     blocks = []
-
-    print(reviewers)
 
     if reviewers:
         btns = [
@@ -267,9 +264,7 @@ def create_edit_request_blocks(context, request):
         }
     ]
 
-    print(reviewer)
     if reviewer != "no reviewer assigned": 
-        print("here")
         blocks[3]['element']['initial_option'] = {
             "text": {
                 "type": "plain_text",
@@ -278,5 +273,4 @@ def create_edit_request_blocks(context, request):
             "value": f"{reviewer}"
         }
     
-    print(blocks)
     return blocks

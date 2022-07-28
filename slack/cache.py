@@ -7,7 +7,6 @@ class Cache:
         self.data[data_name] = data
 
     def update(self, data_name, data):
-            print('here')
             self.data[data_name] = data
 
     def get(self, data_name):
