@@ -1,7 +1,7 @@
 import requests
 import datetime
 
-url = "https://df8f-45-67-20-226.eu.ngrok.io"
+url = "https://app-cthojegtpq-uc.a.run.app"
 
 def return_users_to_add():
     return [{
@@ -39,23 +39,6 @@ def return_workers():
         "roles": ["cw"]
     }]
     
-    
-def return_workers_and_reviewers():
-    for user in return_users_to_add():
-        requests.post(url + "/api/add_user", json=user)
-        
-    return [{
-        "service_id": "worker-1",
-        "roles": ["cw"]
-    },
-    {
-        "service_id": "worker-2",
-        "roles": ["cw", "r"]
-    },
-    {
-        "service_id": "worker-3",
-        "roles": ["cw", "r"]
-    }]
     
     
 def create_invalid_requests():
@@ -210,7 +193,6 @@ def create_invalid_requests():
     
     
 def create_valid_requests():
-    tomorrow = str(datetime.date.today() + datetime.timedelta(days=1))
     save_users()
     
     return [{
@@ -249,4 +231,3 @@ def create_valid_requests():
         "bonus_type": "pskcosjn",
         "description": "whjghdc"
     }]
-    
