@@ -1,6 +1,13 @@
 import json
 import requests
 import pytest
+# import os
+# import sys
+# path_windows = "\\".join(os.path.abspath(__file__).split("\\")[:-3])
+# path_linux = "/".join(os.path.abspath(__file__).split("/")[:-3])
+# sys.path.append(path_windows)
+# sys.path.append(path_linux)
+# from tests.services import return_users_to_add, return_workers
 from services import return_users_to_add, return_workers
 
 url = "http://127.0.0.1:8000"
