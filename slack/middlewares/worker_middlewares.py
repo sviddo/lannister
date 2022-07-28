@@ -115,6 +115,7 @@ def get_requests(context):
         valide = [request for request in user_requests if request['status'] in ('c', 'e')]
         return valide
 
+
 def create_see_requests_blocks(context):
     """Returns dictionary object wich will be
     passed to 'see_requests' modal to build it.

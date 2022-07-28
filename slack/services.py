@@ -37,6 +37,7 @@ def get_user_roles(user_id):
 
 def get_assigned_requests(reviewer_id):
     assigned_requests = requests.get(f'{URL}/api/reviewer_requests/{reviewer_id}')
+
     if assigned_requests.status_code != 200:
         return []
     assigned_requests = assigned_requests.json()
