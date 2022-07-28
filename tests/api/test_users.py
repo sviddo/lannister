@@ -91,4 +91,27 @@ class TestGetSingleUser:
         entire_url = url + f"/api/user/{test['service_id']}"
         single_user = requests.get(url=entire_url)
         
-        assert single_user.status_code == 200  
+        assert single_user.status_code == 200
+        
+        
+        
+class TestDeleteSingleUser:
+    
+    @pytest.mark.parametrize("test",
+                             ["abjdsbcjdcjdcjdjjdkj",
+                              "1234567891234",
+                              "add-user-4"])
+    def test_invalid_data(self, test):
+        entire_url = url + f"/api/user/{test}"
+        single_user = requests.delete(url=entire_url)
+        
+        assert single_user.status_code == 400
+        
+        
+    @pytest.mark.parametrize("test", 
+                             return_users_to_add())
+    def test_valid_data(self, test):
+        entire_url = url + f"/api/user/{test['service_id']}"
+        single_user = requests.delete(url=entire_url)
+        
+        assert single_user.status_code == 200
