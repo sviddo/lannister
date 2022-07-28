@@ -70,3 +70,25 @@ class TestAddSingleUser:
         
         assert user_to_add.status_code == 400 and {"service_id": ["This field must be unique."]} == user_to_add.json()
         
+        
+    
+class TestGetSingleUser:
+    
+    @pytest.mark.parametrize("test",
+                             ["abjdsbcjdcjdcjdjjdkj",
+                              "1234567891234",
+                              "add-user-4"])
+    def test_invalid_data(self, test):
+        entire_url = url + f"/api/user/{test}"
+        single_user = requests.get(url=entire_url)
+        
+        assert single_user.status_code == 404
+        
+        
+    @pytest.mark.parametrize("test", 
+                             return_users_to_add())
+    def test_valid_data(self, test):
+        entire_url = url + f"/api/user/{test['service_id']}"
+        single_user = requests.get(url=entire_url)
+        
+        assert single_user.status_code == 200  
