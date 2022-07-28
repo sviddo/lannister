@@ -1,3 +1,5 @@
+url = "http://127.0.0.1:8000"
+
 def return_users_to_add():
     return [{
         "service_id": "add-user-1",

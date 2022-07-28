@@ -8,9 +8,7 @@ import requests
 # sys.path.append(path_linux)
 # from tests.services import return_users_to_add, return_workers
 # from api.test_users import TestAddSingleUser
-from services import return_users_to_add
-
-url = "http://127.0.0.1:8000"
+from services import return_users_to_add, url
 
 # @pytest.mark.dependency(depends=["TestAddSingleUser::test_valid_data"])
 def test_get_requests():

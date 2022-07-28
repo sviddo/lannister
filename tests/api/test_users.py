@@ -8,9 +8,11 @@ import pytest
 # sys.path.append(path_windows)
 # sys.path.append(path_linux)
 # from tests.services import return_users_to_add, return_workers
-from services import return_users_to_add, return_workers
-
-url = "http://127.0.0.1:8000"
+from services import (
+    url,
+    return_users_to_add, 
+    return_workers,
+)
 
 def test_get_users():
     entire_url = url + "/api/users"
