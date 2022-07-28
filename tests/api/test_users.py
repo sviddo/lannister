@@ -14,6 +14,7 @@ from services import (
     return_workers,
 )
 
+
 def test_get_users():
     entire_url = url + "/api/users"
     users = requests.get(url=entire_url)
@@ -62,6 +63,7 @@ class TestAddSingleUser:
         assert invalid_user.status_code == 400
         
     
+    # @pytest.mark.order(before="test_requests.py::TestCreateRequests::test_invalid_data")
     @pytest.mark.dependency(name="TestAddSingleUser::test_valid_data")
     @pytest.mark.parametrize("test",
                              return_users_to_add())

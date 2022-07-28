@@ -171,7 +171,8 @@ def create_request(request):
         if serializer.is_valid():
             pass
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer_error = json.loads(json.dumps(serializer.errors))
+            return Response(serializer_error, status=status.HTTP_400_BAD_REQUEST)
         
         serializer.save()
     except CustomException as exc:
