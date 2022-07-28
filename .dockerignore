@@ -1,0 +1,19 @@
+# Git
+.git
+.gitignore
+
+# Docker
+.docker
+
+# Django
+slack/__pycache__/
+slack/*/__pycache__/
+lannister/__pycache__/
+api/__pycache__/
+api/*/__pycache__/
+
+# Local DB
+db.sqlite3
+
+# Python
+.venv/
