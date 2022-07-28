@@ -116,7 +116,7 @@ def show_all_requests(ack, client, body):
                 "type": "modal",
                 "callback_id": "new_request_submission",
                 "title": {"type": "plain_text", "text": "Requests"},
-                "blocks": blocks
+                "blocks": blocks[:-1]
             }
         )
     else:
@@ -341,7 +341,8 @@ def show_requests(ack, client, body, context):
         view={
             "type": "modal",
             "callback_id": "see_requests_modal_submission",
-            "external_id": "user_requestss",
+            "private_metadata": f"{old_view['view']['id']}",
+            #"external_id": "user_requestss",
             "title": {"type": "plain_text", "text": "My requests"},
             "blocks": blocks
         }
@@ -384,7 +385,6 @@ def update_request(ack, body, client, context, say):
     request_description = submited_values['request_description']['bonus']['value']
     request_reviewer = submited_values['request_reviewer']['bonus']['selected_option']['value']
     request_id, initial_reviewer = body['view']['private_metadata'].split(', ')
-
     request = {
         "reviewer": request_reviewer,
         "bonus_type": bonus_type,
@@ -807,3 +807,28 @@ def handle_some_action(ack, body, client):
                 "blocks": blocks
             }
         )
+
+@app.event("team_join")
+def add_new_member(body, event, ack):
+    ack()
+    user_id = event['user']['id']
+    data = {
+        "service_id": f"{user_id}",
+        "roles": ["cw"] 
+    }
+    requests.post(f"{URL}/api/add_user", json=data)
+    #print(event)
+
+
+@app.event("user_change")
+def remove_member(body, event, ack):
+    ack()
+    user_id = event['user']['id']
+    if event['user']['deleted'] == True:
+        requests.delete(f"{URL}/api/user/{user_id}")
+    elif event['user']['deleted'] == False:
+        data = {
+            "service_id": f"{user_id}",
+            "roles": ["cw"] 
+        }
+        requests.post(f"{URL}/api/add_user", json=data)

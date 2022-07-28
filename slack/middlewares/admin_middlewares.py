@@ -84,7 +84,10 @@ def create_request_blocks(requests):
         for request in requests:
             creation_time = dt.strptime(request['creation_time'], '%Y-%m-%dT%H:%M:%S.%fZ')
             creation_time_parsed = f"{creation_time.year}-{creation_time.month}-{creation_time.day}  {creation_time.hour}:{creation_time.minute}:{creation_time.second}"
-            message = f"*Creator:* <@{request['creator']}>\n*Reviewer:* <@{request['reviewer']}>\n*Creation time:* {creation_time_parsed}\n "
+            if request['reviewer'] == "no reviewer assigned":
+                message = f"*Creator:* <@{request['creator']}>\n*Reviewer:* no reviewer assigned\n*Creation time:* {creation_time_parsed}\n "
+            else:
+                message = f"*Creator:* <@{request['creator']}>\n*Reviewer:* <@{request['reviewer']}>\n*Creation time:* {creation_time_parsed}\n "
             blocks.extend(  
                 [
                     {
