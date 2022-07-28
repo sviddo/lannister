@@ -2,7 +2,7 @@ import json
 import requests
 import pytest
 
-from conftest import return_users_to_add
+from conftest import return_users_to_add, return_workers
 
 url = "http://127.0.0.1:8000"
 
@@ -64,6 +64,7 @@ class TestAddSingleUser:
             user_to_add.status_code == 400 and {"service_id": ["This field must be unique."]} == user_to_add.json()
             
             
+    @pytest.mark.dependency(depends=["TestAddSingleUser::test_valid_data"])
     @pytest.mark.parametrize("test",
                              return_users_to_add())
     def test_same_valid_data(self, test):
@@ -118,3 +119,39 @@ class TestDeleteSingleUser:
         single_user = requests.delete(url=entire_url)
         
         assert single_user.status_code == 200
+        
+        
+        
+class TestHandleReviewerRole:
+    
+    @pytest.mark.parametrize("test",
+                             ["abjdsbcjdcjdcjdjjdkj",
+                              "1234567891234",
+                              "add-user-4"])
+    def test_invalid_data(self, test):
+        entire_url = url + f"/api/reviewer_role/{test}"
+        single_user = requests.patch(url=entire_url)
+        
+        assert single_user.status_code == 400
+        
+        
+    @pytest.mark.dependency(name="TestHandleReviewerRole::test_valid_data", depends=["TestAddSingleUser::test_valid_data"])
+    @pytest.mark.parametrize("test", 
+                             return_workers())
+    def test_valid_data(self, test):
+        requests.post(url=url + "/api/add_user", json=test)  # add worker in database to make him reviewer
+        entire_url = url + f"/api/reviewer_role/{test['service_id']}"
+        single_user = requests.patch(url=entire_url)
+        
+        assert single_user.status_code == 200 or \
+            single_user.status_code == 400 and single_user.json() == ["User is already reviewer!"]
+        
+        
+    @pytest.mark.dependency(depends=["TestHandleReviewerRole::test_valid_data"])
+    @pytest.mark.parametrize("test", 
+                             return_workers())
+    def test_same_valid_data(self, test):
+        entire_url = url + f"/api/reviewer_role/{test['service_id']}"
+        single_user = requests.patch(url=entire_url)
+        
+        assert single_user.status_code == 400 and single_user.json() == ["User is already reviewer!"]
