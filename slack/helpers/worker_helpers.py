@@ -1,4 +1,4 @@
-def reviewer_home_blocks():
+def worker_home_blocks():
     blocks = [
         {
             "type": "section",

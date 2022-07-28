@@ -12,7 +12,6 @@ from .views import (
     get_requests_per_reviewer,
 )
 
-
 urlpatterns = [
     path('users', get_users, name='get-users'),
     path('user/<str:user_id>', SingleUser.as_view(), name='single-user'),

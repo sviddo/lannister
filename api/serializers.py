@@ -181,7 +181,8 @@ class RequestSerializer(serializers.Serializer):
         try:
             reviewer = User.objects.filter(pk=validated_data['reviewer']).first()
         except KeyError:
-            reviewer = instance.reviewer
+            reviewer = None
+
 
         for field in ['reviewer', 'status', 'bonus_type', 'description']:
             field_object = Request._meta.get_field(field)
