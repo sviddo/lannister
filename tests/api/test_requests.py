@@ -20,8 +20,6 @@ def test_get_requests():
 class TestRequests:
     pytest.my_list = []
     
-    # @pytest.mark.order(after="test_users.py::TestHandleReviewerRole::test_delete_valid_data")
-    # @pytest.mark.dependency(name="TestCreateRequests::test_valid_data")
     @pytest.mark.parametrize("test",
                              create_valid_requests())
     def test_valid_data_add(self, test):
@@ -30,7 +28,6 @@ class TestRequests:
         pytest.my_list.append(valid_request.json())
     
     
-    # @pytest.mark.order(after="test_users.py::TestHandleReviewerRole::test_delete_valid_data")
     @pytest.mark.parametrize("test",
                              create_invalid_requests())   
     def test_invalid_data_add(self, test):
@@ -46,7 +43,6 @@ class TestRequests:
         assert invalid_request.status_code == 400
         
         
-    # @pytest.mark.dependency(depends=["TestCreateRequests::test_valid_data"])
     def test_invalid_data_update(self):
         created_requests_copy =  pytest.my_list.copy()
         
@@ -71,25 +67,24 @@ class TestRequests:
         
         
         
-    # @pytest.mark.dependency(depends=["TestCreateRequests::test_valid_data"])
     def test_valid_data_update(self):
-        invalid_request = requests.patch(url + f"/api/request/{pytest.my_list[0]['id']}", json={"status": "r"})
-        assert invalid_request.status_code == 201
+        valid_request = requests.patch(url + f"/api/request/{pytest.my_list[0]['id']}", json={"status": "r"})
+        assert valid_request.status_code == 201
         
-        invalid_request = requests.patch(url + f"/api/request/{pytest.my_list[1]['id']}", json={"status": "p"})
-        assert invalid_request.status_code == 201
+        valid_request = requests.patch(url + f"/api/request/{pytest.my_list[1]['id']}", json={"status": "p"})
+        assert valid_request.status_code == 201
         
         tomorrow = str(datetime.date.today() + datetime.timedelta(days=1))
         
-        invalid_request = requests.patch(url + f"/api/request/{pytest.my_list[2]['id']}", json={"paymant_day": tomorrow,
+        valid_request = requests.patch(url + f"/api/request/{pytest.my_list[2]['id']}", json={"paymant_day": tomorrow,
                                                                                                   "status": "a"})
-        assert invalid_request.status_code == 201
+        assert valid_request.status_code == 201
         
-        invalid_request = requests.patch(url + f"/api/request/{pytest.my_list[3]['id']}", json={"bonus_type": "random_data"})
-        assert invalid_request.status_code == 201
+        valid_request = requests.patch(url + f"/api/request/{pytest.my_list[3]['id']}", json={"bonus_type": "random_data"})
+        assert valid_request.status_code == 201
         
-        invalid_request = requests.patch(url + f"/api/request/{pytest.my_list[3]['id']}", json={"description": "random_data"})
-        assert invalid_request.status_code == 201
+        valid_request = requests.patch(url + f"/api/request/{pytest.my_list[3]['id']}", json={"description": "random_data"})
+        assert valid_request.status_code == 201
         
         
     @pytest.mark.parametrize("test", ["random_data_1",
@@ -99,11 +94,10 @@ class TestRequests:
         assert invalid_requests.status_code == 400
         
         
-    # @pytest.mark.dependency(depends=["TestCreateRequests::test_valid_data"])
     @pytest.mark.parametrize("test", return_users_to_add())
     def test_valid_data_user(self, test):
-        invalid_requests = requests.get(url + f"/api/requests/{test['service_id']}")
-        assert invalid_requests.status_code == 200
+        valid_requests = requests.get(url + f"/api/requests/{test['service_id']}")
+        assert valid_requests.status_code == 200
         
         
     @pytest.mark.parametrize("test", ["add-user-1",
@@ -113,11 +107,11 @@ class TestRequests:
         assert invalid_requests.status_code == 400
         
         
-    # @pytest.mark.dependency(depends=["TestCreateRequests::test_valid_data"])
     @pytest.mark.parametrize("test", [user for user in return_users_to_add() if "r" in user["roles"]])
     def test_valid_data_reviewer(self, test):
-        invalid_requests = requests.get(url + f"/api/reviewer_requests/{test['service_id']}")
-        assert invalid_requests.status_code == 200
+        valid_requests = requests.get(url + f"/api/reviewer_requests/{test['service_id']}")
+        assert valid_requests.status_code == 200 or \
+            valid_requests.status_code == 400 and valid_requests.json() == ['Reviewer has no assigned requests!']
         
         
     @pytest.mark.parametrize("test", 
